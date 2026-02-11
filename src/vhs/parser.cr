@@ -14,6 +14,9 @@ module Vhs
       next_token
     end
 
+    # Returns the parser errors.
+    getter errors : Array(ParserError)
+
     # ParserError represents an error with parsing a tape file.
     # It tracks the token causing the error and a human readable error message.
     class ParserError
@@ -126,9 +129,14 @@ module Vhs
       @peek = @lexer.next_token
     end
 
-    # TODO: Implement parse_keypress, parse_set, parse_output, etc.
+    # parse_keypress parses a keypress command.
+    #
+    #	Key[@<time>] [count]
     private def parse_keypress(type : Token::Type) : Command
-      Command.new(type)
+      cmd = Command.new(type)
+      cmd.options = parse_speed
+      cmd.args = parse_repeat
+      cmd
     end
 
     # ameba:disable Metrics/CyclomaticComplexity
@@ -209,64 +217,421 @@ module Vhs
       cmd
     end
 
+    # parse_output parses an output command.
+    # An output command takes a file path to which to output.
+    #
+    #	Output <path>
     private def parse_output : Command
-      Command.new(Token::OUTPUT)
+      cmd = Command.new(Token::OUTPUT)
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@cur, "Expected file path after output")
+        return cmd
+      end
+
+      ext = File.extname(@peek.literal)
+      if !ext.empty?
+        cmd.options = ext
+      else
+        cmd.options = ".png"
+        unless @peek.literal.ends_with?('/')
+          @errors << ParserError.new(@peek, "Expected folder with trailing slash")
+        end
+      end
+
+      cmd.args = @peek.literal
+      next_token
+      cmd
     end
 
+    # parse_sleep parses a sleep command.
+    # A sleep command takes a time for how long to sleep.
+    #
+    #	Sleep <time>
     private def parse_sleep : Command
-      Command.new(Token::SLEEP)
+      cmd = Command.new(Token::SLEEP)
+      cmd.args = parse_time
+      cmd
     end
 
+    # parse_type parses a type command.
+    #
+    #	Type "string"
     private def parse_type : Command
-      Command.new(Token::TYPE)
+      cmd = Command.new(Token::TYPE)
+
+      cmd.options = parse_speed
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@peek, "#{@cur.literal} expects string")
+      end
+
+      while @peek.type == Token::STRING
+        next_token
+        cmd.args += @cur.literal
+
+        # If the next token is a string, add a space between them.
+        # Since tokens must be separated by a whitespace, this is most likely
+        # what the user intended.
+        #
+        # Although it is possible that there may be multiple spaces / tabs between
+        # the tokens, however if the user was intending to type multiple spaces
+        # they would need to use a string literal.
+
+        if @peek.type == Token::STRING
+          cmd.args += " "
+        end
+      end
+
+      cmd
     end
 
+    # parse_ctrl parses a control command.
+    # A control command takes one or multiples characters and/or modifiers to type while ctrl is held down.
+    #
+    #	Ctrl[+Alt][+Shift]+<char>
+    #	E.g:
+    #	Ctrl+Shift+O
+    #	Ctrl+Alt+Shift+P
     private def parse_ctrl : Command
-      Command.new(Token::CTRL)
+      args = [] of String
+
+      in_modifier_chain = true
+      while @peek.type == Token::PLUS
+        next_token
+        peek = @peek
+
+        # Get key from keywords and check if it's a valid modifier
+        if k = Token::KEYWORDS[peek.literal]?
+          if Token.modifier?(k)
+            unless in_modifier_chain
+              @errors << ParserError.new(@cur, "Modifiers must come before other characters")
+              # Clear args so the error is returned
+              args.clear
+              next
+            end
+
+            args << peek.literal
+            next_token
+            next
+          end
+        end
+
+        in_modifier_chain = false
+
+        # Add key argument.
+        case
+        when peek.type == Token::ENTER,
+             peek.type == Token::SPACE,
+             peek.type == Token::BACKSPACE,
+             peek.type == Token::MINUS,
+             peek.type == Token::AT,
+             peek.type == Token::LEFT_BRACKET,
+             peek.type == Token::RIGHT_BRACKET,
+             peek.type == Token::CARET,
+             peek.type == Token::BACKSLASH,
+             peek.type == Token::STRING && peek.literal.size == 1
+          args << peek.literal
+        else
+          # Key arguments with len > 1 are not valid
+          @errors << ParserError.new(@cur, "Not a valid modifier")
+          @errors << ParserError.new(@cur, "Invalid control argument: #{@cur.literal}")
+        end
+
+        next_token
+      end
+
+      if args.empty?
+        @errors << ParserError.new(@cur, "Expected control character with args, got #{@cur.literal}")
+      end
+
+      ctrl_args = args.join(" ")
+      Command.new(Token::CTRL, "", ctrl_args)
     end
 
+    # parse_alt parses an alt command.
+    # An alt command takes a character to type while the modifier is held down.
+    #
+    #	Alt+<character>
     private def parse_alt : Command
+      if @peek.type == Token::PLUS
+        next_token
+        if @peek.type == Token::STRING ||
+           @peek.type == Token::ENTER ||
+           @peek.type == Token::LEFT_BRACKET ||
+           @peek.type == Token::RIGHT_BRACKET ||
+           @peek.type == Token::TAB
+          c = @peek.literal
+          next_token
+          return Command.new(Token::ALT, "", c)
+        end
+      end
+
+      @errors << ParserError.new(@cur, "Expected alt character, got #{@cur.literal}")
       Command.new(Token::ALT)
     end
 
+    # parse_shift parses a shift command.
+    # A shift command takes one character and types while shift is held down.
+    #
+    #	Shift+<char>
+    #	E.g.
+    #	Shift+A
+    #	Shift+Tab
+    #	Shift+Enter
     private def parse_shift : Command
+      if @peek.type == Token::PLUS
+        next_token
+        if @peek.type == Token::STRING ||
+           @peek.type == Token::ENTER ||
+           @peek.type == Token::LEFT_BRACKET ||
+           @peek.type == Token::RIGHT_BRACKET ||
+           @peek.type == Token::TAB
+          c = @peek.literal
+          next_token
+          return Command.new(Token::SHIFT, "", c)
+        end
+      end
+
+      @errors << ParserError.new(@cur, "Expected shift character, got #{@cur.literal}")
       Command.new(Token::SHIFT)
     end
 
+    # parse_hide parses a Hide command.
+    #
+    #	Hide
     private def parse_hide : Command
       Command.new(Token::HIDE)
     end
 
+    # parse_require parses a Require command.
+    #
+    #	Require
     private def parse_require : Command
-      Command.new(Token::REQUIRE)
+      cmd = Command.new(Token::REQUIRE)
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@peek, "#{@cur.literal} expects one string")
+      end
+
+      cmd.args = @peek.literal
+      next_token
+
+      cmd
     end
 
+    # parse_show parses a Show command.
+    #
+    #	Show
     private def parse_show : Command
       Command.new(Token::SHOW)
     end
 
+    # parse_wait parses a wait command.
     private def parse_wait : Command
-      Command.new(Token::WAIT)
+      cmd = Command.new(Token::WAIT)
+
+      if @peek.type == Token::PLUS
+        next_token
+        if @peek.type != Token::STRING || (@peek.literal != "Line" && @peek.literal != "Screen")
+          @errors << ParserError.new(@peek, "Wait+ expects Line or Screen")
+          return cmd
+        end
+        cmd.args = @peek.literal
+        next_token
+      else
+        cmd.args = "Line"
+      end
+
+      cmd.options = parse_speed
+      if !cmd.options.empty?
+        # TODO: Validate duration is positive
+        # In Go: dur, _ := time.ParseDuration(cmd.Options)
+        # if dur <= 0 { error }
+        # For now, we'll skip validation
+      end
+
+      if @peek.type != Token::REGEX
+        # fallback to default
+        return cmd
+      end
+      next_token
+      begin
+        Regex.new(@cur.literal)
+      rescue ex
+        @errors << ParserError.new(@cur, "Invalid regular expression '#{@cur.literal}': #{ex.message}")
+        return cmd
+      end
+
+      cmd.args += " " + @cur.literal
+
+      cmd
     end
 
+    # parse_source parses source command.
     private def parse_source : Array(Command)
-      [Command.new(Token::SOURCE)]
+      cmd = Command.new(Token::SOURCE)
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@cur, "Expected path after Source")
+        next_token
+        return [cmd]
+      end
+
+      src_path = @peek.literal
+
+      # Check if path has .tape extension
+      ext = File.extname(src_path)
+      if ext != ".tape"
+        @errors << ParserError.new(@peek, "Expected file with .tape extension")
+        next_token
+        return [cmd]
+      end
+
+      # Check if tape exists
+      unless File.exists?(src_path)
+        not_found_err = "File #{src_path} not found"
+        @errors << ParserError.new(@peek, not_found_err)
+        next_token
+        return [cmd]
+      end
+
+      # Check if source tape contains nested Source command
+      begin
+        src_content = File.read(src_path)
+      rescue ex
+        read_err = "Unable to read file: #{src_path}"
+        @errors << ParserError.new(@peek, read_err)
+        next_token
+        return [cmd]
+      end
+
+      # Check source tape is NOT empty
+      if src_content.empty?
+        read_err = "Source tape: #{src_path} is empty"
+        @errors << ParserError.new(@peek, read_err)
+        next_token
+        return [cmd]
+      end
+
+      src_lexer = Lexer.new(src_content)
+      src_parser = Parser.new(src_lexer)
+
+      # Check not nested source
+      src_cmds = src_parser.parse
+      src_cmds.each do |src_cmd|
+        if src_cmd.type == Token::SOURCE
+          @errors << ParserError.new(@peek, "Nested Source detected")
+          next_token
+          return [cmd]
+        end
+      end
+
+      # Check src errors
+      src_errors = src_parser.errors
+      if src_errors.size > 0
+        @errors << ParserError.new(@peek, "#{src_path} has #{src_errors.size} errors")
+        next_token
+        return [cmd]
+      end
+
+      filtered = [] of Command
+      src_cmds.each do |src_cmd|
+        # Output have to be avoid in order to not overwrite output of the original tape.
+        if src_cmd.type == Token::SOURCE || src_cmd.type == Token::OUTPUT
+          next
+        end
+        filtered << src_cmd
+      end
+
+      next_token
+      filtered
     end
 
+    # parse_screenshot parses screenshot command.
+    # Screenshot command takes a file path for storing screenshot.
+    #
+    #	Screenshot <path>
     private def parse_screenshot : Command
-      Command.new(Token::SCREENSHOT)
+      cmd = Command.new(Token::SCREENSHOT)
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@cur, "Expected path after Screenshot")
+        next_token
+        return cmd
+      end
+
+      path = @peek.literal
+
+      # Check if path has .png extension
+      ext = File.extname(path)
+      if ext != ".png"
+        @errors << ParserError.new(@peek, "Expected file with .png extension")
+        next_token
+        return cmd
+      end
+
+      cmd.args = path
+      next_token
+
+      cmd
     end
 
+    # parse_copy parses a copy command
+    # A copy command takes a string to the clipboard
+    #
+    #	Copy "string"
     private def parse_copy : Command
-      Command.new(Token::COPY)
+      cmd = Command.new(Token::COPY)
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@peek, "#{@cur.literal} expects string")
+      end
+      while @peek.type == Token::STRING
+        next_token
+        cmd.args += @cur.literal
+
+        # If the next token is a string, add a space between them.
+        # Since tokens must be separated by a whitespace, this is most likely
+        # what the user intended.
+        #
+        # Although it is possible that there may be multiple spaces / tabs between
+        # the tokens, however if the user was intending to type multiple spaces
+        # they would need to use a string literal.
+
+        if @peek.type == Token::STRING
+          cmd.args += " "
+        end
+      end
+      cmd
     end
 
+    # parse_paste parses paste command
+    # Paste Command the string from the clipboard buffer.
+    #
+    #	Paste
     private def parse_paste : Command
       Command.new(Token::PASTE)
     end
 
+    # parse_env parses Env command
+    # Env command takes in a key-value pair which is set.
+    #
+    #	Env key "value"
     private def parse_env : Command
-      Command.new(Token::ENV)
+      cmd = Command.new(Token::ENV)
+
+      cmd.options = @peek.literal
+      next_token
+
+      if @peek.type != Token::STRING
+        @errors << ParserError.new(@peek, "#{@cur.literal} expects string")
+      end
+
+      cmd.args = @peek.literal
+      next_token
+
+      cmd
     end
 
     # parse_speed parses a typing speed indication.
