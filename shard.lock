@@ -1,0 +1,82 @@
+version: 2.0
+shards:
+  ameba:
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 1.6.4
+
+  ansi:
+    git: https://github.com/dsisnero/ansi.git
+    version: 0.1.0+git.commit.95816585410e02bda1c5d2195549ab77a7f29ee9
+
+  baked_file_system:
+    git: https://github.com/schovi/baked_file_system.git
+    version: 0.13.0+git.commit.636b800614ecbe55997fbde9650c5866e1f5b438
+
+  cellwrap:
+    git: https://github.com/dsisnero/cellwrap.git
+    version: 0.1.0+git.commit.d898f154af8cdf6ac85cfc72a24f4a354be3d88b
+
+  cml:
+    git: https://github.com/dsisnero/cml.git
+    version: 0.5.0+git.commit.52ca259420a04e37a40cb12aa56674148ef13760
+
+  colorful:
+    git: https://github.com/dsisnero/colorful.git
+    version: 0.1.0+git.commit.f6fbe31e048dab06783e34b82f52d7527763f7eb
+
+  crimage:
+    git: https://github.com/naqvis/crimage.git
+    version: 1.0.4+git.commit.b65f67df27f4cb8807a34d94a90dfd4162acf45a
+
+  easyclip:
+    git: https://github.com/kojix2/easyclip.git
+    version: 0.1.1
+
+  golden:
+    git: https://github.com/dsisnero/golden.git
+    version: 0.1.0+git.commit.82c92f031cbd48f150d8c76d321b5f9211d6d440
+
+  lipgloss:
+    git: https://github.com/dsisnero/lipgloss.git
+    version: 2.0.0-exp+git.commit.ea981d6aa50075cd7918d7d03994e8b6feec2428
+
+  mosaic:
+    git: https://github.com/dsisnero/mosaic.git
+    version: 0.1.0+git.commit.afef1373e37de29845d762daf31b12f93c05f153
+
+  nucleoc:
+    git: https://github.com/dsisnero/nucleoc.git
+    version: 0.1.0+git.commit.2bc7f15384e9dd9da04258d784756dbf2b75c701
+
+  similar:
+    git: https://github.com/dsisnero/similar.cr.git
+    version: 0.1.0+git.commit.52cfbb2cf1295fabc0a4bf2405819181bcae6046
+
+  stumpy_core:
+    git: https://github.com/stumpycr/stumpy_core.git
+    version: 1.9.1
+
+  stumpy_png:
+    git: https://github.com/stumpycr/stumpy_png.git
+    version: 5.0.1
+
+  term2:
+    git: https://github.com/dsisnero/term2.git
+    version: 0.5.0+git.commit.50c4426c8f4a566943c2c9aec7215ac63f332283
+
+  terminfo:
+    git: https://github.com/docelic/terminfo.git
+    version: 0.8.1
+
+  textseg:
+    git: https://github.com/naqvis/uni_text_seg.git
+    version: 0.1.3
+
+  ultraviolet:
+    git: https://github.com/dsisnero/ultraviolet.git
+    version: 0.1.0+git.commit.ad51770ca0d24713e1108f0aee78205672b401d1
+
+  uniwidth:
+    git: https://github.com/naqvis/uni_char_width.git
+    version: 0.1.3
+

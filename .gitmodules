@@ -1,0 +1,3 @@
+[submodule "vendor/vhs"]
+	path = vendor/vhs
+	url = https://github.com/charmbracelet/vhs

@@ -1,0 +1,27 @@
+name: vhs
+version: 0.1.0
+
+authors:
+  - Dominic Sisneros <dsisnero@gmail.com>
+
+targets:
+  vhs:
+    main: src/vhs.cr
+
+dependencies:
+  similar:
+    github: dsisnero/similar.cr
+  term2:
+    github: dsisnero/term2
+    branch: v2-exp
+  golden:
+    github: dsisnero/golden
+
+crystal: ">= 1.19.1"
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.0
+
+license: MIT
