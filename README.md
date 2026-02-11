@@ -64,16 +64,16 @@ in the `vendor/vhs` git submodule and serves as the reference.
 
 ### Setup
 
-1.  Clone with submodules:
+1. Clone with submodules:
 
 ```bash
 git clone --recurse-submodules https://github.com/dsisnero/vhs
 ```
 
-2.  Install dependencies:
+2. Install dependencies:
 
-*   Crystal (>= 1.19.1)
-*   `ttyd` and `ffmpeg` (required by VHS, see [vendor README](vendor/vhs/README.md#installation))
+* Crystal (>= 1.19.1)
+* `ttyd` and `ffmpeg` (required by VHS, see [vendor README](vendor/vhs/README.md#installation))
 
 ### Building
 
@@ -97,12 +97,12 @@ Run `make help` for all available targets.
 
 ## Contributing
 
-1.  Fork it (<https://github.com/dsisnero/vhs/fork>)
-2.  Create your feature branch (`git checkout -b my-new-feature`)
-3.  Commit your changes (`git commit -am 'Add some feature'`)
-4.  Push to the branch (`git push origin my-new-feature`)
-5.  Create a new Pull Request
+1. Fork it (<https://github.com/dsisnero/vhs/fork>)
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create a new Pull Request
 
 ## Contributors
 
-*   [Dominic Sisneros](https://github.com/dsisnero) — creator and maintainer
+* [Dominic Sisneros](https://github.com/dsisnero) — creator and maintainer

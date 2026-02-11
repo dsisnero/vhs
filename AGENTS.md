@@ -23,9 +23,9 @@ This is a library that ports the golang <https://github.com/charmbracelet/vhs> l
 * **Use `grep` for file discovery** - Search for files by name or content before reading
 * **Handle missing files gracefully** - Report missing files clearly rather than causing errors
 
-*   All tests must live under the `spec/` directory
-*   Every new or modified source file under `src/` must have corresponding specs
-*   Temporary files must be in ./temp directory. Dont use system temp or working directory
+* All tests must live under the `spec/` directory
+* Every new or modified source file under `src/` must have corresponding specs
+* Temporary files must be in ./temp directory. Dont use system temp or working directory
 
 ## Issue Tracking
 
@@ -34,31 +34,33 @@ Run `bd prime` for workflow context, or install hooks (`bd hooks install`) for a
 
 **Quick reference:**
 
-*   `bd ready` - Find unblocked work
-*   `bd create "Title" --type task --priority 2` - Create issue
-*   `bd close <id>` - Complete work
-*   `bd sync` - Sync with git (run at session end)
-*   `bd types` - Show available issue types
+* `bd ready` - Find unblocked work
+* `bd create "Title" --type task --priority 2` - Create issue
+* `bd close <id>` - Complete work
+* `bd sync` - Sync with git (run at session end)
+* `bd types` - Show available issue types
 
-**Do not use internal tools to track progress** - We use beads (bd) for all issues, tasks, and todos. Never use AI assistant's internal todo tracking tools. Do not use internal todo tool
+**Do not use internal tools to track progress** - We use beads (bd) for all issues, tasks, and todos.
+Never use AI assistant's internal todo tracking tools. Do not use internal todo tool
 
 For full workflow details: `bd prime`
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, you MUST complete ALL steps below.
+Work is NOT complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
-1.  **File issues for remaining work** - Create issues for anything that needs follow-up
-2.  **Run quality gates** (if code changed) - Tests, linters, builds
-    *   Safe commands on our code only (no git submodules, no `lib/`):
-        *   `crystal tool format src spec bin`
-        *   `ameba --fix src spec bin`
-        *   `ameba src spec bin` (gating)
-        *   `rumdl fmt src spec bin`
-3.  **Update issue status** - Close finished work, update in-progress items
-4.  **PUSH TO REMOTE** - This is MANDATORY:
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+   * Safe commands on our code only (no git submodules, no `lib/`):
+     * `crystal tool format src spec bin`
+     * `ameba --fix src spec bin`
+     * `ameba src spec bin` (gating)
+     * `rumdl fmt src spec bin`
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
 
    ```bash
    git pull --rebase
@@ -67,13 +69,13 @@ For full workflow details: `bd prime`
    git status  # MUST show "up to date with origin"
    ```
 
-5.  **Clean up** - Clear stashes, prune remote branches
-6.  **Verify** - All changes committed AND pushed
-7.  **Hand off** - Provide context for next session
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
 
-*   Work is NOT complete until `git push` succeeds
-*   NEVER stop before pushing - that leaves work stranded locally
-*   NEVER say "ready to push when you are" - YOU must push
-*   If push fails, resolve and retry until it succeeds
+* Work is NOT complete until `git push` succeeds
+* NEVER stop before pushing - that leaves work stranded locally
+* NEVER say "ready to push when you are" - YOU must push
+* If push fails, resolve and retry until it succeeds
