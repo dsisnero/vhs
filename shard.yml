@@ -16,6 +16,10 @@ dependencies:
     branch: v2-exp
   golden:
     github: dsisnero/golden
+  colorful:
+    github: dsisnero/colorful
+  crimage:
+    github: naqvis/crimage
 
 crystal: ">= 1.19.1"
 
