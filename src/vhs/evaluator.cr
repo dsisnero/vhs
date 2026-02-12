@@ -263,13 +263,46 @@ module Vhs
   # ExecuteSleep sleeps for the desired time specified through the argument of
   # the Sleep command.
   def self.execute_sleep(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Parse duration and sleep
+    # Parse duration (simple implementation for now)
+    # Supports formats: "1s", "500ms", "0.5s"
+    duration_str = cmd.args
+    seconds = 0.0
+
+    if duration_str.ends_with?("ms")
+      ms = duration_str[0...-2].to_f? || 0.0
+      seconds = ms / 1000.0
+    elsif duration_str.ends_with?("s")
+      s = duration_str[0...-1].to_f? || 0.0
+      seconds = s
+    else
+      # Assume seconds
+      seconds = duration_str.to_f? || 0.0
+    end
+
+    sleep(seconds.seconds) if seconds > 0
+
     nil
   end
 
   # ExecuteType types the argument string on the running instance of vhs.
-  def self.execute_type(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement typing with typing speed
+  def self.execute_type(cmd : Parser::Command, v : VHS) : Exception?
+    terminal = v.terminal
+    return Exception.new("terminal not started") unless terminal
+
+    text = cmd.args
+    typing_speed = v.options.typing_speed
+
+    if typing_speed > 0.milliseconds
+      # Type character by character with delay
+      text.each_char do |char|
+        terminal.write(char.to_s)
+        sleep(typing_speed)
+      end
+    else
+      # Type all at once
+      terminal.write(text)
+    end
+
     nil
   end
 
@@ -387,9 +420,52 @@ module Vhs
   # ExecuteKey is a higher-order function that returns a CommandFunc to execute
   # a key press for a given key. This is so that the logic for key pressing
   # (since they are repeatable and delayable) can be re-used.
-  def self.execute_key(_key : String) : CommandFunc
-    ->(_cmd : Parser::Command, _v : VHS) : Exception? {
-      # TODO: Implement key press with typing speed and repeat
+  def self.execute_key(key : String) : CommandFunc
+    ->(cmd : Parser::Command, v : VHS) : Exception? {
+      terminal = v.terminal
+      return Exception.new("terminal not started") unless terminal
+
+      # Map key names to characters/sequences
+      key_char = case key
+                 when "Enter"
+                   "\n"
+                 when "Backspace"
+                   "\b"
+                 when "Delete"
+                   "\u007f" # DEL character
+                 when "Tab"
+                   "\t"
+                 when "Escape"
+                   "\e"
+                 when "Space"
+                   " "
+                 when "ArrowUp"
+                   "\e[A"
+                 when "ArrowDown"
+                   "\e[B"
+                 when "ArrowRight"
+                   "\e[C"
+                 when "ArrowLeft"
+                   "\e[D"
+                 when "PageUp"
+                   "\e[5~"
+                 when "PageDown"
+                   "\e[6~"
+                 else
+                   # Default: send as-is (for keys like "a", "b", etc.)
+                   key.downcase
+                 end
+
+      terminal.write(key_char)
+
+      # Handle repeat count
+      repeat = cmd.options.to_i? || 1
+      if repeat > 1
+        (repeat - 1).times do
+          terminal.write(key_char)
+        end
+      end
+
       nil
     }
   end
@@ -824,15 +900,95 @@ module Vhs
       return [InvalidSyntaxError.new(errs)]
     end
 
+    # Create VHS instance
+    v = VHS.new
+
+    # Apply default options
+    v.options = default_vhs_options
+
     # Execute SET and ENV commands first (before starting recording)
     cmds.each do |cmd|
       if (cmd.type == Token::SET && cmd.options == "Shell") || cmd.type == Token::ENV
-        # TODO: Execute(cmd, v)
+        err = execute(cmd, v)
+        v.errors << err if err
       end
     end
 
-    # TODO: Start recording, execute remaining commands, render output
-    [] of Exception
+    # Start VHS
+    v.start
+
+    # Execute remaining commands
+    cmds.each do |cmd|
+      unless (cmd.type == Token::SET && cmd.options == "Shell") || cmd.type == Token::ENV
+        err = execute(cmd, v)
+        v.errors << err if err
+      end
+    end
+
+    # TODO: Render output
+    v.errors
+  end
+
+  # TerminalEmulator provides a simple terminal emulator for running shell commands
+  # and capturing output.
+  class TerminalEmulator
+    property process : Process
+    property width : Int32
+    property height : Int32
+    property buffer : Array(Array(Char))
+    property cursor_x : Int32
+    property cursor_y : Int32
+
+    def initialize(shell_cmd : String, shell_args : Array(String) = [] of String, env : Hash(String, String)? = nil)
+      @width = 80
+      @height = 24
+      @buffer = Array.new(@height) { Array.new(@width, ' ') }
+      @cursor_x = 0
+      @cursor_y = 0
+
+      # Start shell process with PTY
+      @process = Process.new(shell_cmd, shell_args, env: env, shell: false, pseudo: true)
+
+      # Set terminal size
+      set_size(@width, @height)
+    end
+
+    # Write text to the terminal (simulates typing)
+    def write(text : String) : Nil
+      @process.input << text
+      @process.input.flush
+    end
+
+    # Read output from terminal
+    def read(timeout_ms : Int32 = 100) : String
+      output = Bytes.new(4096)
+      bytes_read = 0
+
+      # Try to read available output
+      begin
+        bytes_read = @process.output.read_nonblock(output)
+      rescue IO::Timeout
+        # No data available
+      end
+
+      String.new(output[0, bytes_read])
+    end
+
+    # Set terminal size
+    def set_size(width : Int32, height : Int32) : Nil
+      @width = width
+      @height = height
+      @buffer = Array.new(@height) { Array.new(@width, ' ') }
+
+      # Send resize signal to process
+      # Note: This is a simplified implementation
+      # In a real terminal emulator, we'd send SIGWINCH
+    end
+
+    # Close the terminal
+    def close : Nil
+      @process.terminate
+    end
   end
 
   # VHS is the object that controls the setup.
@@ -842,10 +998,7 @@ module Vhs
     property? started : Bool
     property? recording : Bool
     property total_frames : Int32
-    property terminal : Ultraviolet::Terminal?
-    property process : Process?
-    property input : IO::FileDescriptor?
-    property output : IO::FileDescriptor?
+    property terminal : TerminalEmulator?
     property mutex : Mutex
 
     def initialize
@@ -855,9 +1008,6 @@ module Vhs
       @recording = true
       @total_frames = 0
       @terminal = nil
-      @process = nil
-      @input = nil
-      @output = nil
       @mutex = Mutex.new
     end
 
@@ -870,18 +1020,12 @@ module Vhs
           return
         end
 
-        # Spawn shell process with PTY
+        # Create terminal emulator with shell
         shell_cmd = @options.shell.command
         shell_args = @options.shell.args
         env = @options.shell.env
 
-        process = Process.new(shell_cmd, shell_args, env: env, shell: false, pseudo: true)
-        @process = process
-        @input = process.input.as(IO::FileDescriptor)
-        @output = process.output.as(IO::FileDescriptor)
-
-        # Create terminal instance
-        @terminal = Ultraviolet::Terminal.new(@input, @output)
+        @terminal = TerminalEmulator.new(shell_cmd, shell_args, env)
 
         @started = true
       ensure
