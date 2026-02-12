@@ -1,3 +1,6 @@
+require "ultraviolet"
+require "process"
+
 module Vhs
   # Theme colors.
   BACKGROUND     = "#171717"
@@ -91,6 +94,18 @@ module Vhs
   # Default shell (platform dependent, set later)
   DEFAULT_SHELL = {% if flag?(:win32) %} "cmd" {% else %} "bash" {% end %}
 
+  # InvalidSyntaxError is returned when the parser encounters one or more errors.
+  class InvalidSyntaxError < Exception
+    getter errors : Array(Parser::ParserError)
+
+    def initialize(@errors : Array(Parser::ParserError))
+    end
+
+    def message : String
+      "parser: #{errors.size} error(s)"
+    end
+  end
+
   # Supported shells of VHS.
   BASH       = "bash"
   CMDEXE     = "cmd"
@@ -157,6 +172,227 @@ module Vhs
       command: ["xonsh", "--no-rc", "-D", "PROMPT=\033[;38;2;91;86;224m>\033[m "]
     ),
   }
+
+  # CommandFunc is a function that executes a command on a running
+  # instance of vhs.
+  alias CommandFunc = Proc(Parser::Command, VHS, Exception?)
+
+  # CommandFuncs maps command types to their executable functions.
+  @@command_funcs : Hash(Token::Type, CommandFunc)? = nil
+  @@settings : Hash(String, CommandFunc)? = nil
+
+  def self.command_funcs : Hash(Token::Type, CommandFunc)
+    @@command_funcs ||= begin
+      hash = {} of Token::Type => CommandFunc
+      hash[Token::ILLEGAL] = ->execute_noop(Parser::Command, VHS)
+      hash[Token::SLEEP] = ->execute_sleep(Parser::Command, VHS)
+      hash[Token::TYPE] = ->execute_type(Parser::Command, VHS)
+      hash[Token::OUTPUT] = ->execute_output(Parser::Command, VHS)
+      hash[Token::SET] = ->execute_set(Parser::Command, VHS)
+      hash[Token::HIDE] = ->execute_hide(Parser::Command, VHS)
+      hash[Token::SHOW] = ->execute_show(Parser::Command, VHS)
+      hash[Token::REQUIRE] = ->execute_require(Parser::Command, VHS)
+      hash[Token::ENV] = ->execute_env(Parser::Command, VHS)
+      hash[Token::COPY] = ->execute_copy(Parser::Command, VHS)
+      hash[Token::PASTE] = ->execute_paste(Parser::Command, VHS)
+      hash[Token::WAIT] = ->execute_wait(Parser::Command, VHS)
+      hash[Token::CTRL] = ->execute_ctrl(Parser::Command, VHS)
+      hash[Token::ALT] = ->execute_alt(Parser::Command, VHS)
+      hash[Token::SHIFT] = ->execute_shift(Parser::Command, VHS)
+      # Key commands use execute_key with specific key
+      # Key commands
+      hash[Token::BACKSPACE] = execute_key("Backspace")
+      hash[Token::DELETE] = execute_key("Delete")
+      hash[Token::INSERT] = execute_key("Insert")
+      hash[Token::DOWN] = execute_key("ArrowDown")
+      hash[Token::ENTER] = execute_key("Enter")
+      hash[Token::LEFT] = execute_key("ArrowLeft")
+      hash[Token::RIGHT] = execute_key("ArrowRight")
+      hash[Token::SPACE] = execute_key("Space")
+      hash[Token::UP] = execute_key("ArrowUp")
+      hash[Token::TAB] = execute_key("Tab")
+      hash[Token::ESCAPE] = execute_key("Escape")
+      hash[Token::PAGE_UP] = execute_key("PageUp")
+      hash[Token::PAGE_DOWN] = execute_key("PageDown")
+      hash
+    end
+  end
+
+  # Settings maps the Set commands to their respective functions.
+  def self.settings : Hash(String, CommandFunc)
+    @@settings ||= begin
+      hash = {} of String => CommandFunc
+      hash["FontFamily"] = ->execute_set_font_family(Parser::Command, VHS)
+      hash["FontSize"] = ->execute_set_font_size(Parser::Command, VHS)
+      hash["Shell"] = ->execute_set_shell(Parser::Command, VHS)
+      hash["Theme"] = ->execute_set_theme(Parser::Command, VHS)
+      hash["TypingSpeed"] = ->execute_set_typing_speed(Parser::Command, VHS)
+      # TODO: Add more settings
+      hash
+    end
+  end
+
+  # ExecuteSet applies the settings on the running vhs specified by the
+  # option and argument pass to the command.
+  def self.execute_set(cmd : Parser::Command, v : VHS) : Exception?
+    func = settings[cmd.options]?
+    if func
+      func.call(cmd, v)
+    else
+      Exception.new("invalid setting #{cmd.options}")
+    end
+  end
+
+  # Execute executes a command on a running instance of vhs.
+  def self.execute(cmd : Parser::Command, v : VHS) : Exception?
+    func = command_funcs[cmd.type]?
+    if func
+      func.call(cmd, v)
+    else
+      Exception.new("no command function for #{cmd.type}")
+    end
+  end
+
+  # ExecuteNoop is a no-op command that does nothing.
+  # Generally, this is used for Unknown commands when dealing with
+  # commands that are not recognized.
+  def self.execute_noop(_cmd : Parser::Command, _v : VHS) : Exception?
+    nil
+  end
+
+  # ExecuteSleep sleeps for the desired time specified through the argument of
+  # the Sleep command.
+  def self.execute_sleep(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Parse duration and sleep
+    nil
+  end
+
+  # ExecuteType types the argument string on the running instance of vhs.
+  def self.execute_type(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Implement typing with typing speed
+    nil
+  end
+
+  # ExecuteOutput applies the output on the vhs videos.
+  def self.execute_output(cmd : Parser::Command, v : VHS) : Exception?
+    case cmd.options
+    when ".mp4"
+      v.options.video.output.mp4 = cmd.args
+    when ".test", ".ascii", ".txt"
+      v.options.test.output = cmd.args
+    when ".png"
+      v.options.video.output.frames = cmd.args
+    when ".webm"
+      v.options.video.output.webm = cmd.args
+    else
+      v.options.video.output.gif = cmd.args
+    end
+    nil
+  end
+
+  # ExecuteHide is a CommandFunc that starts or stops the recording of the vhs.
+  def self.execute_hide(_cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: v.pause_recording
+    nil
+  end
+
+  # ExecuteShow is a CommandFunc that resumes the recording of the vhs.
+  def self.execute_show(_cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: v.resume_recording
+    nil
+  end
+
+  # ExecuteRequire is a CommandFunc that checks if all the binaries mentioned in the
+  # Require command are present. If not, it exits with a non-zero error.
+  def self.execute_require(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Check if binary exists
+    nil
+  end
+
+  # ExecuteEnv sets env with given key-value pair.
+  def self.execute_env(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Set environment variable
+    nil
+  end
+
+  # ExecuteCopy copies text to the clipboard.
+  def self.execute_copy(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Copy to clipboard
+    nil
+  end
+
+  # ExecutePaste pastes text from the clipboard.
+  def self.execute_paste(_cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Paste from clipboard
+    nil
+  end
+
+  # ExecuteWait is a CommandFunc that waits for a regex match for the given amount of time.
+  def self.execute_wait(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Implement wait with timeout and pattern
+    nil
+  end
+
+  # ExecuteCtrl is a CommandFunc that presses the argument keys and/or modifiers
+  # with the ctrl key held down on the running instance of vhs.
+  def self.execute_ctrl(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Implement ctrl key combination
+    nil
+  end
+
+  # ExecuteAlt is a CommandFunc that presses the argument key with the alt key
+  # held down on the running instance of vhs.
+  def self.execute_alt(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Implement alt key combination
+    nil
+  end
+
+  # ExecuteShift is a CommandFunc that presses the argument key with the shift
+  # key held down on the running instance of vhs.
+  def self.execute_shift(cmd : Parser::Command, _v : VHS) : Exception?
+    # TODO: Implement shift key combination
+    nil
+  end
+
+  # ExecuteSetFontSize applies the font size on the vhs.
+  def self.execute_set_font_size(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Parse font size and apply
+    nil
+  end
+
+  # ExecuteSetFontFamily applies the font family on the vhs.
+  def self.execute_set_font_family(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Apply font family
+    nil
+  end
+
+  # ExecuteSetShell applies the shell on the vhs.
+  def self.execute_set_shell(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Validate shell and apply
+    nil
+  end
+
+  # ExecuteSetTheme applies the theme on the vhs.
+  def self.execute_set_theme(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Parse theme and apply
+    nil
+  end
+
+  # ExecuteSetTypingSpeed applies the default typing speed on the vhs.
+  def self.execute_set_typing_speed(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Parse duration and apply
+    nil
+  end
+
+  # ExecuteKey is a higher-order function that returns a CommandFunc to execute
+  # a key press for a given key. This is so that the logic for key pressing
+  # (since they are repeatable and delayable) can be re-used.
+  def self.execute_key(_key : String) : CommandFunc
+    ->(_cmd : Parser::Command, _v : VHS) : Exception? {
+      # TODO: Implement key press with typing speed and repeat
+      nil
+    }
+  end
 
   # Keymap is the map of runes to input.Keys.
   # It is used to convert a string to the correct set of input.Keys for go-rod.
@@ -485,7 +721,7 @@ module Vhs
     property loop_offset : Float64
     property wait_timeout : Time::Span
     property wait_pattern : Regex
-    property cursor_blink : Bool
+    property? cursor_blink : Bool
     property screenshot : ScreenshotOptions
     property style : StyleOptions
 
@@ -579,7 +815,23 @@ module Vhs
   # Evaluate takes as input a tape string, an output writer, and an output file
   # and evaluates all the commands within the tape string and produces a GIF.
   def self.evaluate(tape : String, output : IO = STDOUT) : Array(Exception)
-    # TODO: Implement evaluation
+    l = Lexer.new(tape)
+    p = Parser.new(l)
+
+    cmds = p.parse
+    errs = p.errors
+    if !errs.empty? || cmds.empty?
+      return [InvalidSyntaxError.new(errs)]
+    end
+
+    # Execute SET and ENV commands first (before starting recording)
+    cmds.each do |cmd|
+      if (cmd.type == Token::SET && cmd.options == "Shell") || cmd.type == Token::ENV
+        # TODO: Execute(cmd, v)
+      end
+    end
+
+    # TODO: Start recording, execute remaining commands, render output
     [] of Exception
   end
 
@@ -587,9 +839,14 @@ module Vhs
   class VHS
     property options : Options
     property errors : Array(Exception)
-    property started : Bool
-    property recording : Bool
+    property? started : Bool
+    property? recording : Bool
     property total_frames : Int32
+    property terminal : Ultraviolet::Terminal?
+    property process : Process?
+    property input : IO::FileDescriptor?
+    property output : IO::FileDescriptor?
+    property mutex : Mutex
 
     def initialize
       @options = Options.new
@@ -597,6 +854,39 @@ module Vhs
       @started = false
       @recording = true
       @total_frames = 0
+      @terminal = nil
+      @process = nil
+      @input = nil
+      @output = nil
+      @mutex = Mutex.new
+    end
+
+    # Start starts ttyd, browser and everything else needed to create the gif.
+    def start : Nil
+      @mutex.lock
+      begin
+        if started?
+          @errors << Exception.new("vhs is already started")
+          return
+        end
+
+        # Spawn shell process with PTY
+        shell_cmd = @options.shell.command
+        shell_args = @options.shell.args
+        env = @options.shell.env
+
+        process = Process.new(shell_cmd, shell_args, env: env, shell: false, pseudo: true)
+        @process = process
+        @input = process.input.as(IO::FileDescriptor)
+        @output = process.output.as(IO::FileDescriptor)
+
+        # Create terminal instance
+        @terminal = Ultraviolet::Terminal.new(@input, @output)
+
+        @started = true
+      ensure
+        @mutex.unlock
+      end
     end
   end
 end
