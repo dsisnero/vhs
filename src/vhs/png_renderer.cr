@@ -2,7 +2,7 @@ require "crimage"
 require "crimage/freetype"
 require "stumpy_png"
 
-module VHS
+module Vhs
   # PNGRenderer renders terminal buffer to PNG images.
   module PNGRenderer
     extend self

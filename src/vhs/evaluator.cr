@@ -2,6 +2,7 @@ require "ultraviolet"
 require "process"
 require "random/secure"
 require "./png_renderer"
+require "./ffmpeg_renderer"
 
 module Vhs
   # Theme colors.
@@ -1873,7 +1874,7 @@ module Vhs
       background = opts.theme.background
 
       # Render PNG
-      ::VHS::PNGRenderer.render(buffer, path,
+      ::Vhs::PNGRenderer.render(buffer, path,
         font_family: opts.font_family,
         font_size: opts.font_size,
         letter_spacing: opts.letter_spacing,
@@ -1892,6 +1893,17 @@ module Vhs
       term.try(&.close) if term
       @started = false
       @recording = false
+    end
+
+    # Render starts rendering the individual frames into a video.
+    def render : Exception?
+      # For now, skip loop offset (TODO: implement ApplyLoopOffset)
+      # if err = apply_loop_offset
+      #   return err
+      # end
+
+      # Generate the video(s) with the frames using FFmpeg
+      ::VHS::FFmpegRenderer.render(@options.video, @options.screenshot)
     end
 
     # Buffer returns the current terminal buffer lines.
