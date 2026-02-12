@@ -326,6 +326,9 @@ module Vhs
       hash[Token::ESCAPE] = execute_key("Escape")
       hash[Token::PAGE_UP] = execute_key("PageUp")
       hash[Token::PAGE_DOWN] = execute_key("PageDown")
+      hash[Token::HOME] = execute_key("Home")
+      hash[Token::END] = execute_key("End")
+      hash[Token::SOURCE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_source(cmd, v) }
       hash
     end
   end
@@ -764,6 +767,36 @@ module Vhs
         # Multi-character, capitalize each?
         terminal.write(key.upcase)
       end
+    end
+
+    nil
+  end
+
+  # ExecuteSource reads and executes commands from a file.
+  def self.execute_source(cmd : Parser::Command, v : VHS) : Exception?
+    path = cmd.args
+    if path.empty?
+      return Exception.new("source path is required")
+    end
+
+    begin
+      content = File.read(path)
+    rescue ex : File::NotFoundError
+      return Exception.new("source file not found: #{path}")
+    end
+
+    l = Lexer.new(content)
+    p = Parser.new(l)
+    cmds = p.parse
+    errs = p.errors
+    if !errs.empty? || cmds.empty?
+      return Exception.new("parser errors in source file")
+    end
+
+    # Execute commands in current VHS instance
+    cmds.each do |cmd|
+      err = execute(cmd, v)
+      return err if err
     end
 
     nil
@@ -1608,7 +1641,7 @@ module Vhs
 
     # Stop VHS
     v.stop
-    sleep 0.1.seconds
+    sleep 0.05.seconds
 
     # TODO: Render output
     v.errors

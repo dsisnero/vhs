@@ -6,8 +6,8 @@ module Vhs
       it "has the correct number of command functions" do
         # Count command functions in evaluator
         command_funcs_count = Vhs.command_funcs.size
-        # The Go test expects 29 command functions
-        command_funcs_count.should eq(29)
+        # The Go test expects 32 command functions (includes HOME, END, SOURCE)
+        command_funcs_count.should eq(32)
       end
     end
 
