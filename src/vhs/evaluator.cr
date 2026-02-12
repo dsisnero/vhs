@@ -1260,10 +1260,34 @@ module Vhs
 
   # ScreenshotOptions holds options for taking screenshots.
   struct ScreenshotOptions
-    property path : String
+    property frame_capture : Bool
+    property next_screenshot_path : String
+    property screenshots : Hash(String, Int32)
+    property input : String
     property style : StyleOptions
 
-    def initialize(*, @path = "", @style = StyleOptions.new)
+    def initialize(
+      *,
+      @input = "",
+      @style = StyleOptions.new,
+      @frame_capture = false,
+      @next_screenshot_path = "",
+      @screenshots = {} of String => Int32,
+    )
+    end
+
+    # make_screenshot stores in screenshots map the target frame of the screenshot.
+    # After storing frame it disables frame capture.
+    def make_screenshot(frame : Int32)
+      @screenshots[@next_screenshot_path] = frame
+      @frame_capture = false
+      @next_screenshot_path = ""
+    end
+
+    # enable_frame_capture prepares capture of next frame by given path.
+    def enable_frame_capture(path : String)
+      @frame_capture = true
+      @next_screenshot_path = path
     end
   end
 
@@ -1382,7 +1406,7 @@ module Vhs
     when '{'
       # JSON theme
       begin
-        return Theme.from_json(s)
+        Theme.from_json(s)
       rescue ex : JSON::ParseException
         raise InvalidThemeError.new(s, ex)
       end
@@ -1466,7 +1490,7 @@ module Vhs
     style = default_style_options
     video = default_video_options
     video.style = style
-    screenshot = ScreenshotOptions.new(path: video.input, style: style)
+    screenshot = ScreenshotOptions.new(input: video.input, style: style)
 
     Options.new(
       font_family: DEFAULT_FONT_FAMILY,
