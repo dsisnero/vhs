@@ -1,5 +1,6 @@
 require "ultraviolet"
 require "process"
+require "random/secure"
 
 module Vhs
   # Theme colors.
@@ -184,21 +185,21 @@ module Vhs
   def self.command_funcs : Hash(Token::Type, CommandFunc)
     @@command_funcs ||= begin
       hash = {} of Token::Type => CommandFunc
-      hash[Token::ILLEGAL] = ->execute_noop(Parser::Command, VHS)
-      hash[Token::SLEEP] = ->execute_sleep(Parser::Command, VHS)
-      hash[Token::TYPE] = ->execute_type(Parser::Command, VHS)
-      hash[Token::OUTPUT] = ->execute_output(Parser::Command, VHS)
-      hash[Token::SET] = ->execute_set(Parser::Command, VHS)
-      hash[Token::HIDE] = ->execute_hide(Parser::Command, VHS)
-      hash[Token::SHOW] = ->execute_show(Parser::Command, VHS)
-      hash[Token::REQUIRE] = ->execute_require(Parser::Command, VHS)
-      hash[Token::ENV] = ->execute_env(Parser::Command, VHS)
-      hash[Token::COPY] = ->execute_copy(Parser::Command, VHS)
-      hash[Token::PASTE] = ->execute_paste(Parser::Command, VHS)
-      hash[Token::WAIT] = ->execute_wait(Parser::Command, VHS)
-      hash[Token::CTRL] = ->execute_ctrl(Parser::Command, VHS)
-      hash[Token::ALT] = ->execute_alt(Parser::Command, VHS)
-      hash[Token::SHIFT] = ->execute_shift(Parser::Command, VHS)
+      hash[Token::ILLEGAL] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_noop(cmd, v) }
+      hash[Token::SLEEP] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_sleep(cmd, v) }
+      hash[Token::TYPE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_type(cmd, v) }
+      hash[Token::OUTPUT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_output(cmd, v) }
+      hash[Token::SET] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set(cmd, v) }
+      hash[Token::HIDE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_hide(cmd, v) }
+      hash[Token::SHOW] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_show(cmd, v) }
+      hash[Token::REQUIRE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_require(cmd, v) }
+      hash[Token::ENV] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_env(cmd, v) }
+      hash[Token::COPY] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_copy(cmd, v) }
+      hash[Token::PASTE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_paste(cmd, v) }
+      hash[Token::WAIT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_wait(cmd, v) }
+      hash[Token::CTRL] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_ctrl(cmd, v) }
+      hash[Token::ALT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_alt(cmd, v) }
+      hash[Token::SHIFT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_shift(cmd, v) }
       # Key commands use execute_key with specific key
       # Key commands
       hash[Token::BACKSPACE] = execute_key("Backspace")
@@ -222,11 +223,11 @@ module Vhs
   def self.settings : Hash(String, CommandFunc)
     @@settings ||= begin
       hash = {} of String => CommandFunc
-      hash["FontFamily"] = ->execute_set_font_family(Parser::Command, VHS)
-      hash["FontSize"] = ->execute_set_font_size(Parser::Command, VHS)
-      hash["Shell"] = ->execute_set_shell(Parser::Command, VHS)
-      hash["Theme"] = ->execute_set_theme(Parser::Command, VHS)
-      hash["TypingSpeed"] = ->execute_set_typing_speed(Parser::Command, VHS)
+      hash["FontFamily"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_font_family(cmd, v) }
+      hash["FontSize"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_font_size(cmd, v) }
+      hash["Shell"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_shell(cmd, v) }
+      hash["Theme"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_theme(cmd, v) }
+      hash["TypingSpeed"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_typing_speed(cmd, v) }
       # TODO: Add more settings
       hash
     end
@@ -247,7 +248,11 @@ module Vhs
   def self.execute(cmd : Parser::Command, v : VHS) : Exception?
     func = command_funcs[cmd.type]?
     if func
-      func.call(cmd, v)
+      err = func.call(cmd, v)
+      if err.nil? && v.recording? && !v.options.test.output.empty?
+        err = v.save_output
+      end
+      err
     else
       Exception.new("no command function for #{cmd.type}")
     end
@@ -325,45 +330,119 @@ module Vhs
 
   # ExecuteHide is a CommandFunc that starts or stops the recording of the vhs.
   def self.execute_hide(_cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: v.pause_recording
+    v.recording = false
     nil
   end
 
   # ExecuteShow is a CommandFunc that resumes the recording of the vhs.
   def self.execute_show(_cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: v.resume_recording
+    v.recording = true
     nil
   end
 
   # ExecuteRequire is a CommandFunc that checks if all the binaries mentioned in the
   # Require command are present. If not, it exits with a non-zero error.
   def self.execute_require(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Check if binary exists
+    binary = cmd.args
+    if Process.find_executable(binary).nil?
+      return Exception.new("required binary '#{binary}' not found in PATH")
+    end
     nil
   end
 
   # ExecuteEnv sets env with given key-value pair.
   def self.execute_env(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Set environment variable
+    key = cmd.options
+    value = cmd.args
+    ENV[key] = value
     nil
   end
 
   # ExecuteCopy copies text to the clipboard.
   def self.execute_copy(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Copy to clipboard
+    # TODO: Implement clipboard integration
+    # For now, just no-op
     nil
   end
 
   # ExecutePaste pastes text from the clipboard.
   def self.execute_paste(_cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Paste from clipboard
+    # TODO: Implement clipboard integration
+    # For now, just no-op
     nil
   end
 
   # ExecuteWait is a CommandFunc that waits for a regex match for the given amount of time.
-  def self.execute_wait(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement wait with timeout and pattern
-    nil
+  def self.execute_wait(cmd : Parser::Command, v : VHS) : Exception?
+    args = cmd.args
+    options = cmd.options
+
+    # Parse timeout from options if present
+    timeout = v.options.wait_timeout
+    if !options.empty?
+      # Parse duration string (similar to sleep)
+      duration_str = options
+      seconds = 0.0
+      if duration_str.ends_with?("ms")
+        ms = duration_str[0...-2].to_f? || 0.0
+        seconds = ms / 1000.0
+      elsif duration_str.ends_with?("s")
+        s = duration_str[0...-1].to_f? || 0.0
+        seconds = s
+      else
+        # Assume seconds
+        seconds = duration_str.to_f? || 0.0
+      end
+      timeout = seconds.seconds
+    end
+
+    # Parse scope and regex from args
+    parts = args.split(' ', 2)
+    scope = "Line"
+    pattern = v.options.wait_pattern
+    if parts.size == 2
+      scope = parts[0]
+      pattern_str = parts[1]
+      begin
+        pattern = Regex.new(pattern_str)
+      rescue ex
+        return Exception.new("invalid regex: #{ex.message}")
+      end
+    elsif parts.size == 1 && !parts[0].empty?
+      pattern_str = parts[0]
+      begin
+        pattern = Regex.new(pattern_str)
+      rescue ex
+        return Exception.new("invalid regex: #{ex.message}")
+      end
+    end
+
+    # Validate scope
+    unless {"Line", "Screen"}.includes?(scope)
+      return Exception.new("invalid scope: #{scope}")
+    end
+
+    start_time = Time.monotonic
+    tick = 10.milliseconds
+
+    while (Time.monotonic - start_time) < timeout
+      case scope
+      when "Line"
+        line = v.current_line
+        if pattern.matches?(line)
+          return nil
+        end
+      when "Screen"
+        buffer = v.buffer
+        text = buffer.join("\n")
+        if pattern.matches?(text)
+          return nil
+        end
+      end
+      sleep tick
+    end
+
+    Exception.new("timeout waiting for pattern #{pattern}")
   end
 
   # ExecuteCtrl is a CommandFunc that presses the argument keys and/or modifiers
@@ -389,31 +468,68 @@ module Vhs
 
   # ExecuteSetFontSize applies the font size on the vhs.
   def self.execute_set_font_size(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Parse font size and apply
+    font_size = cmd.args.to_i32?
+    if font_size.nil? || font_size <= 0
+      return Exception.new("invalid font size: #{cmd.args}")
+    end
+    opts = v.options.dup
+    opts.font_size = font_size
+    v.options = opts
     nil
   end
 
   # ExecuteSetFontFamily applies the font family on the vhs.
   def self.execute_set_font_family(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Apply font family
+    opts = v.options.dup
+    opts.font_family = cmd.args
+    v.options = opts
     nil
   end
 
   # ExecuteSetShell applies the shell on the vhs.
   def self.execute_set_shell(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Validate shell and apply
+    shell_name = cmd.args
+    shell = SHELLS[shell_name]?
+    if shell.nil?
+      return Exception.new("invalid shell: #{shell_name}")
+    end
+    opts = v.options.dup
+    opts.shell = shell
+    v.options = opts
     nil
   end
 
   # ExecuteSetTheme applies the theme on the vhs.
   def self.execute_set_theme(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Parse theme and apply
+    # TODO: Proper theme parsing and lookup
+    # For now, just set default theme
+    opts = v.options.dup
+    opts.theme = DEFAULT_THEME
+    v.options = opts
     nil
   end
 
   # ExecuteSetTypingSpeed applies the default typing speed on the vhs.
   def self.execute_set_typing_speed(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Parse duration and apply
+    duration_str = cmd.args
+    seconds = 0.0
+
+    if duration_str.ends_with?("ms")
+      ms = duration_str[0...-2].to_f? || 0.0
+      seconds = ms / 1000.0
+    elsif duration_str.ends_with?("s")
+      s = duration_str[0...-1].to_f? || 0.0
+      seconds = s
+    else
+      # Assume milliseconds
+      ms = duration_str.to_f? || 0.0
+      seconds = ms / 1000.0
+    end
+
+    typing_speed = seconds.seconds
+    opts = v.options.dup
+    opts.typing_speed = typing_speed
+    v.options = opts
     nil
   end
 
@@ -881,7 +997,17 @@ module Vhs
   # random_dir returns a random temporary directory to be used for storing frames
   # from screenshots of the terminal.
   private def self.random_dir : String
-    Dir.mktmpdir("vhs")
+    # Create a temporary directory in system temp
+    tmpdir = ENV["TMPDIR"]? || "/tmp"
+    prefix = "vhs-"
+    loop do
+      name = prefix + Random::Secure.hex(8)
+      path = File.join(tmpdir, name)
+      if !Dir.exists?(path)
+        Dir.mkdir(path, 0o750)
+        return path
+      end
+    end
   end
 
   private def self.double(n : Int32) : Int32
@@ -897,7 +1023,7 @@ module Vhs
     cmds = p.parse
     errs = p.errors
     if !errs.empty? || cmds.empty?
-      return [InvalidSyntaxError.new(errs)]
+      return [InvalidSyntaxError.new(errs)] of Exception
     end
 
     # Create VHS instance
@@ -938,6 +1064,8 @@ module Vhs
     property buffer : Array(Array(Char))
     property cursor_x : Int32
     property cursor_y : Int32
+    property output_buffer : String::Builder
+    property reader_fiber : Fiber?
 
     def initialize(shell_cmd : String, shell_args : Array(String) = [] of String, env : Hash(String, String)? = nil)
       @width = 80
@@ -945,12 +1073,20 @@ module Vhs
       @buffer = Array.new(@height) { Array.new(@width, ' ') }
       @cursor_x = 0
       @cursor_y = 0
+      @output_buffer = String::Builder.new
+      @reader_fiber = nil
 
       # Start shell process with PTY
-      @process = Process.new(shell_cmd, shell_args, env: env, shell: false, pseudo: true)
+      @process = Process.new(shell_cmd, shell_args, env: env, shell: false,
+        input: Process::Redirect::Pipe,
+        output: Process::Redirect::Pipe,
+        error: Process::Redirect::Pipe)
 
       # Set terminal size
       set_size(@width, @height)
+
+      # Start background reader
+      start_reader
     end
 
     # Write text to the terminal (simulates typing)
@@ -985,8 +1121,77 @@ module Vhs
       # In a real terminal emulator, we'd send SIGWINCH
     end
 
+    # Start background reader to capture output
+    private def start_reader : Nil
+      @reader_fiber = spawn do
+        output = Bytes.new(4096)
+        loop do
+          begin
+            bytes_read = @process.output.read(output)
+            break if bytes_read == 0 # EOF
+
+            chunk = String.new(output[0, bytes_read])
+            @output_buffer << chunk
+            # Also update buffer with simple handling
+            update_buffer(chunk)
+          rescue IO::Error
+            # Process likely ended
+            break
+          end
+        end
+      end
+    end
+
+    # Update buffer with output (simple implementation)
+    private def update_buffer(chunk : String) : Nil
+      # Simple handling: just append characters to current position
+      # This doesn't handle ANSI escapes properly
+      chunk.each_char do |char|
+        next if char == '\r' # Ignore carriage return
+        if char == '\n'
+          @cursor_x = 0
+          @cursor_y += 1
+          if @cursor_y >= @height
+            # Scroll
+            @buffer.shift
+            @buffer << Array.new(@width, ' ')
+            @cursor_y = @height - 1
+          end
+        elsif char == '\b' # Backspace
+          @cursor_x -= 1 if @cursor_x > 0
+          @buffer[@cursor_y][@cursor_x] = ' ' if @cursor_x >= 0 && @cursor_x < @width
+        elsif char.control?
+          # Ignore other control characters for now
+        else
+          if @cursor_x < @width && @cursor_y < @height
+            @buffer[@cursor_y][@cursor_x] = char
+            @cursor_x += 1
+          end
+        end
+      end
+    end
+
+    # Get terminal contents as text
+    def contents : String
+      @output_buffer.to_s
+    end
+
+    # Get terminal screen as lines
+    def screen_lines : Array(String)
+      lines = [] of String
+      @buffer.each do |row|
+        line = String.build do |str|
+          row.each { |char| str << char }
+        end
+        # Trim trailing spaces
+        lines << line.rstrip
+      end
+      lines
+    end
+
     # Close the terminal
     def close : Nil
+      @reader_fiber.try &.terminate if @reader_fiber
       @process.terminate
     end
   end
@@ -1021,9 +1226,17 @@ module Vhs
         end
 
         # Create terminal emulator with shell
-        shell_cmd = @options.shell.command
-        shell_args = @options.shell.args
-        env = @options.shell.env
+        shell_cmd = @options.shell.command[0]? || ""
+        shell_args = @options.shell.command[1..]
+        env_array = @options.shell.env
+        env_hash = {} of String => String
+        env_array.each do |entry|
+          if entry.includes?('=')
+            key, val = entry.split('=', 2)
+            env_hash[key] = val
+          end
+        end
+        env = env_hash.empty? ? nil : env_hash
 
         @terminal = TerminalEmulator.new(shell_cmd, shell_args, env)
 
@@ -1031,6 +1244,49 @@ module Vhs
       ensure
         @mutex.unlock
       end
+    end
+
+    # Buffer returns the current terminal buffer lines.
+    def buffer : Array(String)
+      term = @terminal
+      return [] of String unless term
+      term.screen_lines
+    end
+
+    # CurrentLine returns the current line from the buffer.
+    def current_line : String
+      # TODO: implement cursor position tracking
+      lines = buffer
+      return "" if lines.empty?
+      lines.last
+    end
+
+    # SaveOutput saves the current buffer to the test output file.
+    def save_output : Exception?
+      output_path = @options.test.output
+      return nil if output_path.empty?
+
+      # Create directory if needed
+      dir = File.dirname(output_path)
+      unless Dir.exists?(dir)
+        Dir.mkdir_p(dir)
+      end
+
+      lines = buffer
+      separator = "────────────────────────────────────────────────────────────────────────────────"
+
+      begin
+        File.open(output_path, "a") do |file|
+          lines.each do |line|
+            file.puts(line)
+          end
+          file.puts(separator)
+        end
+      rescue ex
+        return ex
+      end
+
+      nil
     end
   end
 end
