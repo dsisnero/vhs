@@ -102,6 +102,6 @@ module Vhs::CLI
 end
 
 # Run CLI if this file is executed directly
-if PROGRAM_NAME == __FILE__
+if PROGRAM_NAME == __FILE__ || File.basename(PROGRAM_NAME).includes?("vhs")
   Vhs::CLI.run
 end

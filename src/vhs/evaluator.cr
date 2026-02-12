@@ -1606,6 +1606,10 @@ module Vhs
       end
     end
 
+    # Stop VHS
+    v.stop
+    sleep 0.1.seconds
+
     # TODO: Render output
     v.errors
   end
@@ -1746,8 +1750,8 @@ module Vhs
 
     # Close the terminal
     def close : Nil
-      @reader_fiber.try &.terminate if @reader_fiber
       @process.terminate
+      # Reader fiber will break due to IO::Error
     end
   end
 
@@ -1818,6 +1822,7 @@ module Vhs
         return unless @started
         @recording = false
         stop_frame_capture
+        @terminal.try(&.close)
         @started = false
       ensure
         @mutex.unlock
@@ -1858,13 +1863,10 @@ module Vhs
     # Stop frame capture loop
     private def stop_frame_capture : Nil
       if stop = @stop_frame_capture
-        stop.close
+        stop.send(nil) rescue nil
         @stop_frame_capture = nil
       end
-      if fiber = @frame_capture_fiber
-        fiber.terminate
-        @frame_capture_fiber = nil
-      end
+      @frame_capture_fiber = nil
     end
 
     # Capture a single frame and save as PNG

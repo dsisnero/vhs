@@ -1,7 +1,7 @@
 require "../spec_helper"
 require "../../src/vhs/png_renderer"
 
-module VHS
+module Vhs
   describe PNGRenderer do
     it "renders simple buffer to PNG file" do
       # Create a 2x2 buffer with characters
