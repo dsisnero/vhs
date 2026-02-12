@@ -525,7 +525,7 @@ module Vhs
     background = opts.theme.background
 
     # Render PNG
-    ::VHS::PNGRenderer.render(buffer, path,
+    ::Vhs::PNGRenderer.render(buffer, path,
       font_family: opts.font_family,
       font_size: opts.font_size,
       letter_spacing: opts.letter_spacing,
@@ -1342,7 +1342,7 @@ module Vhs
     property command : Array(String)
     property env : Array(String)
 
-    def initialize(*, @command = [] of String, @env = [] of String)
+    def initialize(*, @command = ["sh"], @env = [] of String)
     end
   end
 
@@ -1811,6 +1811,19 @@ module Vhs
       end
     end
 
+    # Stop stops recording and cleans up resources.
+    def stop : Nil
+      @mutex.lock
+      begin
+        return unless @started
+        @recording = false
+        stop_frame_capture
+        @started = false
+      ensure
+        @mutex.unlock
+      end
+    end
+
     # Ensure video input directory exists
     private def ensure_input_dir : Nil
       input_dir = @options.video.input
@@ -1903,7 +1916,7 @@ module Vhs
       # end
 
       # Generate the video(s) with the frames using FFmpeg
-      ::VHS::FFmpegRenderer.render(@options.video, @options.screenshot)
+      ::Vhs::FFmpegRenderer.render(@options.video, @options.screenshot)
     end
 
     # Buffer returns the current terminal buffer lines.
@@ -1948,5 +1961,75 @@ module Vhs
 
       nil
     end
+  end
+
+  # Evaluate takes as input a tape string, an output writer, and evaluates all
+  # the commands within the tape string to produce video outputs.
+  #
+  # Returns an array of errors encountered during evaluation.
+  def evaluate(tape : String, output : IO = STDOUT) : Array(Exception)
+    STDERR.puts "DEBUG: evaluate called"
+    # Parse the tape
+    lexer = Lexer.new(tape)
+    parser = Parser.new(lexer)
+    commands = parser.parse
+    errors = parser.errors
+
+    if !errors.empty? || commands.empty?
+      return errors.map { |err| Exception.new(err) }
+    end
+
+    # Create VHS instance
+    v = VHS.new
+
+    # Execute SET and ENV commands first (as in Go)
+    commands.each do |cmd|
+      if (cmd.type == Token::Type::SET && cmd.options == "Shell") || cmd.type == Token::Type::ENV
+        if err = VHS.execute(cmd, v)
+          return [err]
+        end
+      end
+    end
+
+    # Start recording
+    v.start
+    return v.errors unless v.errors.empty?
+
+    # Find offset where non-SET/OUTPUT/REQUIRE commands begin
+    offset = 0
+    commands.each_with_index do |cmd, i|
+      if cmd.type == Token::Type::SET || cmd.type == Token::Type::OUTPUT || cmd.type == Token::Type::REQUIRE
+        # Highlight and execute (except Shell)
+        # output.puts highlight(cmd, false) if output.tty?  # TODO: implement highlight
+        if cmd.options != "Shell"
+          if err = VHS.execute(cmd, v)
+            return [err]
+          end
+        end
+      else
+        offset = i
+        break
+      end
+    end
+
+    # TODO: Validate dimensions
+
+    # Execute remaining commands
+    commands[offset..].each do |cmd|
+      if err = VHS.execute(cmd, v)
+        v.stop
+        return [err]
+      end
+    end
+
+    # Stop recording
+    v.stop
+
+    # Render video
+    if err = v.render
+      return [err]
+    end
+
+    v.errors
   end
 end
