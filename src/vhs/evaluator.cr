@@ -1,6 +1,7 @@
 require "ultraviolet"
 require "process"
 require "random/secure"
+require "./png_renderer"
 
 module Vhs
   # Theme colors.
@@ -501,8 +502,38 @@ module Vhs
 
   # ExecuteScreenshot is a CommandFunc that indicates a new screenshot must be taken.
   def self.execute_screenshot(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Implement screenshot/frame capture
-    # For now, just increment frame count
+    path = cmd.args
+    if path.empty?
+      return Exception.new("Screenshot path is required")
+    end
+
+    term = v.terminal
+    if term.nil?
+      return Exception.new("Terminal not started")
+    end
+
+    buffer = term.buffer
+    if buffer.empty?
+      # Empty buffer, still create PNG with background
+      buffer = Array.new(term.height) { Array.new(term.width, ' ') }
+    end
+
+    # Get font settings from options
+    opts = v.options
+    foreground = opts.theme.foreground
+    background = opts.theme.background
+
+    # Render PNG
+    ::VHS::PNGRenderer.render(buffer, path,
+      font_family: opts.font_family,
+      font_size: opts.font_size,
+      letter_spacing: opts.letter_spacing,
+      line_height: opts.line_height,
+      foreground: foreground,
+      background: background
+    )
+
+    # Increment frame count (for recording loop)
     v.total_frames += 1
     nil
   end
@@ -557,10 +588,10 @@ module Vhs
       return Exception.new("invalid scope: #{scope}")
     end
 
-    start_time = Time.monotonic
+    start_time = Time.instant
     tick = 10.milliseconds
 
-    while (Time.monotonic - start_time) < timeout
+    while (Time.instant - start_time) < timeout
       case scope
       when "Line"
         line = v.current_line
@@ -1047,6 +1078,8 @@ module Vhs
                    "\b"
                  when "Delete"
                    "\u007f" # DEL character
+                 when "Insert"
+                   "\e[2~"
                  when "Tab"
                    "\t"
                  when "Escape"
@@ -1065,6 +1098,10 @@ module Vhs
                    "\e[5~"
                  when "PageDown"
                    "\e[6~"
+                 when "Home"
+                   "\e[1~"
+                 when "End"
+                   "\e[4~"
                  else
                    # Default: send as-is (for keys like "a", "b", etc.)
                    key.downcase
@@ -1722,6 +1759,8 @@ module Vhs
     property total_frames : Int32
     property terminal : TerminalEmulator?
     property mutex : Mutex
+    property frame_capture_fiber : Fiber?
+    property stop_frame_capture : Channel(Nil)?
 
     def initialize
       @options = Options.new
@@ -1731,6 +1770,8 @@ module Vhs
       @total_frames = 0
       @terminal = nil
       @mutex = Mutex.new
+      @frame_capture_fiber = nil
+      @stop_frame_capture = nil
     end
 
     # Start starts ttyd, browser and everything else needed to create the gif.
@@ -1757,10 +1798,100 @@ module Vhs
 
         @terminal = TerminalEmulator.new(shell_cmd, shell_args, env)
 
+        # Ensure video input directory exists
+        ensure_input_dir
+
+        # Start frame capture loop
+        start_frame_capture
+
         @started = true
       ensure
         @mutex.unlock
       end
+    end
+
+    # Ensure video input directory exists
+    private def ensure_input_dir : Nil
+      input_dir = @options.video.input
+      return if input_dir.empty?
+      Dir.mkdir_p(input_dir)
+    end
+
+    # Start frame capture loop
+    private def start_frame_capture : Nil
+      return unless @recording
+      return if @frame_capture_fiber
+
+      framerate = @options.video.framerate
+      frame_interval = 1.0 / framerate
+      stop_channel = Channel(Nil).new
+      @stop_frame_capture = stop_channel
+
+      @frame_capture_fiber = spawn do
+        loop do
+          sleep frame_interval
+          select
+          when stop_channel.receive
+            break
+          else
+            # Capture frame
+            capture_frame
+          end
+        end
+      end
+    end
+
+    # Stop frame capture loop
+    private def stop_frame_capture : Nil
+      if stop = @stop_frame_capture
+        stop.close
+        @stop_frame_capture = nil
+      end
+      if fiber = @frame_capture_fiber
+        fiber.terminate
+        @frame_capture_fiber = nil
+      end
+    end
+
+    # Capture a single frame and save as PNG
+    private def capture_frame : Nil
+      term = @terminal
+      return unless term
+      return unless @recording
+
+      buffer = term.buffer
+      return if buffer.empty?
+
+      # Generate frame filename
+      frame_num = @total_frames + 1
+      filename = sprintf("frame_%04d.png", frame_num)
+      path = File.join(@options.video.input, filename)
+
+      # Get font settings from options
+      opts = @options
+      foreground = opts.theme.foreground
+      background = opts.theme.background
+
+      # Render PNG
+      ::VHS::PNGRenderer.render(buffer, path,
+        font_family: opts.font_family,
+        font_size: opts.font_size,
+        letter_spacing: opts.letter_spacing,
+        line_height: opts.line_height,
+        foreground: foreground,
+        background: background
+      )
+
+      @total_frames += 1
+    end
+
+    # Close stops recording and cleans up resources
+    def close : Nil
+      stop_frame_capture
+      term = @terminal
+      term.try(&.close) if term
+      @started = false
+      @recording = false
     end
 
     # Buffer returns the current terminal buffer lines.
