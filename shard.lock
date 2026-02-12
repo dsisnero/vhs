@@ -62,7 +62,7 @@ shards:
 
   term2:
     git: https://github.com/dsisnero/term2.git
-    version: 0.5.0+git.commit.50c4426c8f4a566943c2c9aec7215ac63f332283
+    version: 0.5.0+git.commit.bafdc6a162032abe577ce2f37a36907f0e016add
 
   terminfo:
     git: https://github.com/docelic/terminfo.git
@@ -74,7 +74,7 @@ shards:
 
   ultraviolet:
     git: https://github.com/dsisnero/ultraviolet.git
-    version: 0.1.0+git.commit.ad51770ca0d24713e1108f0aee78205672b401d1
+    version: 0.1.0+git.commit.00d2d78fa04096b9307e4fccff395674877c20f4
 
   uniwidth:
     git: https://github.com/naqvis/uni_char_width.git

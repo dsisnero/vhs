@@ -50,6 +50,77 @@ module Vhs
     bright_white: BRIGHT_WHITE
   )
 
+  # Path to themes.json file (relative to project root)
+  THEMES_JSON_PATH = File.expand_path("../../vendor/vhs/themes.json", __DIR__)
+
+  # Cached themes loaded from themes.json
+  @@themes : Array(Theme)? = nil
+
+  # Load themes from themes.json file
+  private def self.load_themes : Array(Theme)
+    @@themes ||= begin
+      content = File.read(THEMES_JSON_PATH)
+      Array(Theme).from_json(content)
+    rescue ex : File::NotFoundError
+      [] of Theme
+    end
+  end
+
+  # Returns sorted theme names (public for testing)
+  def self.sorted_theme_names : Array(String)
+    load_themes.map(&.name).sort_by!(&.downcase)
+  end
+
+  # Levenshtein distance between two strings
+  private def self.levenshtein_distance(a : String, b : String) : Int32
+    n = a.size
+    m = b.size
+    return m if n == 0
+    return n if m == 0
+
+    # Create two rows
+    row0 = Array.new(m + 1, 0)
+    row1 = Array.new(m + 1, 0)
+
+    (0..m).each { |j| row0[j] = j }
+
+    (1..n).each do |i|
+      row1[0] = i
+      (1..m).each do |j|
+        cost = a[i - 1] == b[j - 1] ? 0 : 1
+        row1[j] = {row1[j - 1] + 1, row0[j] + 1, row0[j - 1] + cost}.min
+      end
+      row0, row1 = row1, row0
+    end
+
+    row0[m]
+  end
+
+  # Find theme by name, returns theme or raises ThemeNotFoundError
+  private def self.find_theme(name : String) : Theme
+    themes = load_themes
+    # Exact match
+    themes.each do |theme|
+      return theme if theme.name == name
+    end
+
+    # Not found, compute suggestions
+    suggestions = [] of String
+    lname = name.downcase
+    themes.each do |theme|
+      ltheme = theme.name.downcase
+      # Levenshtein distance <= 2
+      distance = levenshtein_distance(lname, ltheme)
+      suggest_by_distance = distance <= 2
+      suggest_by_prefix = lname.starts_with?(ltheme)
+      if suggest_by_distance || suggest_by_prefix
+        suggestions << theme.name
+      end
+    end
+
+    raise ThemeNotFoundError.new(name, suggestions)
+  end
+
   # Default constants
   DEFAULT_COLUMNS         =   80
   DEFAULT_HEIGHT          =  600
@@ -95,6 +166,17 @@ module Vhs
   # Default shell (platform dependent, set later)
   DEFAULT_SHELL = {% if flag?(:win32) %} "cmd" {% else %} "bash" {% end %}
 
+  # Simple clipboard storage for Copy/Paste commands
+  @@clipboard : String = ""
+
+  def self.clipboard : String
+    @@clipboard
+  end
+
+  def self.clipboard=(text : String)
+    @@clipboard = text
+  end
+
   # InvalidSyntaxError is returned when the parser encounters one or more errors.
   class InvalidSyntaxError < Exception
     getter errors : Array(Parser::ParserError)
@@ -104,6 +186,32 @@ module Vhs
 
     def message : String
       "parser: #{errors.size} error(s)"
+    end
+  end
+
+  # ThemeNotFoundError is returned when a requested theme is not found.
+  class ThemeNotFoundError < Exception
+    getter theme : String
+    getter suggestions : Array(String)
+
+    def initialize(@theme : String, @suggestions : Array(String) = [] of String)
+    end
+
+    def message : String
+      if suggestions.empty?
+        "invalid `Set Theme #{theme.inspect}`: theme does not exist"
+      else
+        "invalid `Set Theme #{theme.inspect}`: did you mean #{suggestions.map(&.inspect).join(", ")}"
+      end
+    end
+  end
+
+  # InvalidThemeError is returned when a theme JSON is invalid.
+  class InvalidThemeError < Exception
+    getter theme : String
+
+    def initialize(@theme : String, cause : Exception? = nil)
+      super("invalid `Set Theme #{theme.inspect}`: #{cause.try(&.message) || "invalid JSON"}", cause)
     end
   end
 
@@ -196,6 +304,7 @@ module Vhs
       hash[Token::ENV] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_env(cmd, v) }
       hash[Token::COPY] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_copy(cmd, v) }
       hash[Token::PASTE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_paste(cmd, v) }
+      hash[Token::SCREENSHOT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_screenshot(cmd, v) }
       hash[Token::WAIT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_wait(cmd, v) }
       hash[Token::CTRL] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_ctrl(cmd, v) }
       hash[Token::ALT] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_alt(cmd, v) }
@@ -225,10 +334,25 @@ module Vhs
       hash = {} of String => CommandFunc
       hash["FontFamily"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_font_family(cmd, v) }
       hash["FontSize"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_font_size(cmd, v) }
-      hash["Shell"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_shell(cmd, v) }
+      hash["Framerate"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_framerate(cmd, v) }
+      hash["Height"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_height(cmd, v) }
+      hash["LetterSpacing"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_letter_spacing(cmd, v) }
+      hash["LineHeight"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_line_height(cmd, v) }
+      hash["PlaybackSpeed"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_playback_speed(cmd, v) }
+      hash["Padding"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_padding(cmd, v) }
       hash["Theme"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_theme(cmd, v) }
       hash["TypingSpeed"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_typing_speed(cmd, v) }
-      # TODO: Add more settings
+      hash["Width"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_width(cmd, v) }
+      hash["Shell"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_shell(cmd, v) }
+      hash["LoopOffset"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_loop_offset(cmd, v) }
+      hash["MarginFill"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_margin_fill(cmd, v) }
+      hash["Margin"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_margin(cmd, v) }
+      hash["WindowBar"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_window_bar(cmd, v) }
+      hash["WindowBarSize"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_window_bar_size(cmd, v) }
+      hash["BorderRadius"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_border_radius(cmd, v) }
+      hash["WaitPattern"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_wait_pattern(cmd, v) }
+      hash["WaitTimeout"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_wait_timeout(cmd, v) }
+      hash["CursorBlink"] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_set_cursor_blink(cmd, v) }
       hash
     end
   end
@@ -360,15 +484,26 @@ module Vhs
 
   # ExecuteCopy copies text to the clipboard.
   def self.execute_copy(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement clipboard integration
-    # For now, just no-op
+    text = cmd.args
+    self.clipboard = text
     nil
   end
 
   # ExecutePaste pastes text from the clipboard.
-  def self.execute_paste(_cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement clipboard integration
-    # For now, just no-op
+  def self.execute_paste(_cmd : Parser::Command, v : VHS) : Exception?
+    terminal = v.terminal
+    return Exception.new("terminal not started") unless terminal
+
+    text = self.clipboard
+    terminal.write(text) unless text.empty?
+    nil
+  end
+
+  # ExecuteScreenshot is a CommandFunc that indicates a new screenshot must be taken.
+  def self.execute_screenshot(cmd : Parser::Command, v : VHS) : Exception?
+    # TODO: Implement screenshot/frame capture
+    # For now, just increment frame count
+    v.total_frames += 1
     nil
   end
 
@@ -447,22 +582,158 @@ module Vhs
 
   # ExecuteCtrl is a CommandFunc that presses the argument keys and/or modifiers
   # with the ctrl key held down on the running instance of vhs.
-  def self.execute_ctrl(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement ctrl key combination
+  def self.execute_ctrl(cmd : Parser::Command, v : VHS) : Exception?
+    terminal = v.terminal
+    return Exception.new("terminal not started") unless terminal
+
+    keys = cmd.args.split(' ')
+
+    # For terminal, we send control characters
+    # Ctrl+letter = ASCII 1-26 (A=1, B=2, ...)
+    # Special cases: Ctrl+[ = ESC (\x1b), Ctrl+\ = FS (\x1c), etc.
+    keys.each do |key|
+      case key.downcase
+      when "c"
+        terminal.write("\x03") # Ctrl+C (ETX)
+      when "d"
+        terminal.write("\x04") # Ctrl+D (EOT)
+      when "z"
+        terminal.write("\x1a") # Ctrl+Z (SUB)
+      when "["
+        terminal.write("\x1b") # Ctrl+[ = ESC
+      when "\\"
+        terminal.write("\x1c") # Ctrl+\ = FS
+      when "]"
+        terminal.write("\x1d") # Ctrl+] = GS
+      when "^"
+        terminal.write("\x1e") # Ctrl+^ = RS
+      when "_"
+        terminal.write("\x1f") # Ctrl+_ = US
+      when "?"
+        terminal.write("\x7f") # Ctrl+? = DEL
+      when "shift"
+        # Ctrl+Shift - just ignore shift for now
+        next
+      when "alt"
+        # Ctrl+Alt - just ignore alt for now
+        next
+      when "enter"
+        # Ctrl+Enter - send CR (but terminal might interpret differently)
+        terminal.write("\r")
+      when "space"
+        # Ctrl+Space = NUL
+        terminal.write("\x00")
+      when "backspace"
+        # Ctrl+Backspace = DEL
+        terminal.write("\x7f")
+      else
+        # Check if single letter A-Z
+        if key.size == 1 && key.matches?(/^[A-Za-z]$/)
+          char_code = key.downcase[0].ord - 'a'.ord + 1
+          terminal.write(char_code.chr.to_s)
+        else
+          # Unknown key, skip
+          next
+        end
+      end
+    end
+
     nil
   end
 
   # ExecuteAlt is a CommandFunc that presses the argument key with the alt key
   # held down on the running instance of vhs.
-  def self.execute_alt(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement alt key combination
+  def self.execute_alt(cmd : Parser::Command, v : VHS) : Exception?
+    terminal = v.terminal
+    return Exception.new("terminal not started") unless terminal
+
+    key = cmd.args
+
+    # In terminal, Alt+key is typically ESC followed by the key
+    # Alt+A = \x1ba, Alt+Enter = \x1b\r, etc.
+    case key.downcase
+    when "enter"
+      terminal.write("\x1b\r")
+    when "tab"
+      terminal.write("\x1b\t")
+    when "space"
+      terminal.write("\x1b ")
+    when "backspace"
+      terminal.write("\x1b\b")
+    else
+      # Check if single character
+      if key.size == 1
+        terminal.write("\x1b#{key}")
+      else
+        # Multi-character, send Alt for each?
+        key.each_char do |char|
+          terminal.write("\x1b#{char}")
+        end
+      end
+    end
+
     nil
   end
 
   # ExecuteShift is a CommandFunc that presses the argument key with the shift
   # key held down on the running instance of vhs.
-  def self.execute_shift(cmd : Parser::Command, _v : VHS) : Exception?
-    # TODO: Implement shift key combination
+  def self.execute_shift(cmd : Parser::Command, v : VHS) : Exception?
+    terminal = v.terminal
+    return Exception.new("terminal not started") unless terminal
+
+    key = cmd.args
+
+    # For terminal, Shift just produces the shifted character
+    # Shift+A = 'A', Shift+1 = '!', etc.
+    # We need to map key names to shifted characters
+    case key.downcase
+    when "enter"
+      # Shift+Enter - just send Enter
+      terminal.write("\r")
+    when "tab"
+      # Shift+Tab is actually backtab: \x1b[Z
+      terminal.write("\x1b[Z")
+    when "space"
+      terminal.write(" ")
+    when "backspace"
+      terminal.write("\b")
+    else
+      # Single character - check if we need to shift it
+      if key.size == 1
+        char = key[0]
+        # Simple mapping for common shifted characters
+        shifted = case char
+                  when '1'  then '!'
+                  when '2'  then '@'
+                  when '3'  then '#'
+                  when '4'  then '$'
+                  when '5'  then '%'
+                  when '6'  then '^'
+                  when '7'  then '&'
+                  when '8'  then '*'
+                  when '9'  then '('
+                  when '0'  then ')'
+                  when '-'  then '_'
+                  when '='  then '+'
+                  when '['  then '{'
+                  when ']'  then '}'
+                  when '\\' then '|'
+                  when ';'  then ':'
+                  when '\'' then '"'
+                  when ','  then '<'
+                  when '.'  then '>'
+                  when '/'  then '?'
+                  when '`'  then '~'
+                  else
+                    char.upcase
+                  end
+        terminal.write(shifted.to_s)
+      else
+        # Multi-character, capitalize each?
+        terminal.write(key.upcase)
+      end
+    end
+
     nil
   end
 
@@ -501,12 +772,13 @@ module Vhs
 
   # ExecuteSetTheme applies the theme on the vhs.
   def self.execute_set_theme(cmd : Parser::Command, v : VHS) : Exception?
-    # TODO: Proper theme parsing and lookup
-    # For now, just set default theme
+    theme = get_theme(cmd.args)
     opts = v.options.dup
-    opts.theme = DEFAULT_THEME
+    opts.theme = theme
     v.options = opts
     nil
+  rescue ex : ThemeNotFoundError | InvalidThemeError
+    ex
   end
 
   # ExecuteSetTypingSpeed applies the default typing speed on the vhs.
@@ -529,6 +801,232 @@ module Vhs
     typing_speed = seconds.seconds
     opts = v.options.dup
     opts.typing_speed = typing_speed
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetFramerate applies the framerate on the vhs.
+  def self.execute_set_framerate(cmd : Parser::Command, v : VHS) : Exception?
+    framerate = cmd.args.to_i32?
+    if framerate.nil? || framerate <= 0
+      return Exception.new("invalid framerate: #{cmd.args}")
+    end
+    opts = v.options.dup
+    video = opts.video.dup
+    video.framerate = framerate
+    opts.video = video
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetHeight applies the height on the vhs.
+  def self.execute_set_height(cmd : Parser::Command, v : VHS) : Exception?
+    height = cmd.args.to_i32?
+    if height.nil? || height <= 0
+      return Exception.new("invalid height: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.height = height
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetLetterSpacing applies the letter spacing on the vhs.
+  def self.execute_set_letter_spacing(cmd : Parser::Command, v : VHS) : Exception?
+    letter_spacing = cmd.args.to_f64?
+    if letter_spacing.nil? || letter_spacing <= 0.0
+      return Exception.new("invalid letter spacing: #{cmd.args}")
+    end
+    opts = v.options.dup
+    opts.letter_spacing = letter_spacing
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetLineHeight applies the line height on the vhs.
+  def self.execute_set_line_height(cmd : Parser::Command, v : VHS) : Exception?
+    line_height = cmd.args.to_f64?
+    if line_height.nil? || line_height <= 0.0
+      return Exception.new("invalid line height: #{cmd.args}")
+    end
+    opts = v.options.dup
+    opts.line_height = line_height
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetPlaybackSpeed applies the playback speed on the vhs.
+  def self.execute_set_playback_speed(cmd : Parser::Command, v : VHS) : Exception?
+    playback_speed = cmd.args.to_f64?
+    if playback_speed.nil? || playback_speed <= 0.0
+      return Exception.new("invalid playback speed: #{cmd.args}")
+    end
+    opts = v.options.dup
+    video = opts.video.dup
+    video.playback_speed = playback_speed
+    opts.video = video
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetPadding applies the padding on the vhs.
+  def self.execute_set_padding(cmd : Parser::Command, v : VHS) : Exception?
+    padding = cmd.args.to_i32?
+    if padding.nil? || padding < 0
+      return Exception.new("invalid padding: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.padding = padding
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetWidth applies the width on the vhs.
+  def self.execute_set_width(cmd : Parser::Command, v : VHS) : Exception?
+    width = cmd.args.to_i32?
+    if width.nil? || width <= 0
+      return Exception.new("invalid width: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.width = width
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteLoopOffset applies the loop offset on the vhs.
+  def self.execute_loop_offset(cmd : Parser::Command, v : VHS) : Exception?
+    loop_offset = cmd.args.to_f64?
+    if loop_offset.nil? || loop_offset < 0.0
+      return Exception.new("invalid loop offset: #{cmd.args}")
+    end
+    opts = v.options.dup
+    opts.loop_offset = loop_offset
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetMarginFill applies the margin fill on the vhs.
+  def self.execute_set_margin_fill(cmd : Parser::Command, v : VHS) : Exception?
+    opts = v.options.dup
+    style = opts.style.dup
+    style.margin_fill = cmd.args
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetMargin applies the margin on the vhs.
+  def self.execute_set_margin(cmd : Parser::Command, v : VHS) : Exception?
+    margin = cmd.args.to_i32?
+    if margin.nil? || margin < 0
+      return Exception.new("invalid margin: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.margin = margin
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetWindowBar applies the window bar on the vhs.
+  def self.execute_set_window_bar(cmd : Parser::Command, v : VHS) : Exception?
+    opts = v.options.dup
+    style = opts.style.dup
+    style.window_bar = cmd.args
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetWindowBarSize applies the window bar size on the vhs.
+  def self.execute_set_window_bar_size(cmd : Parser::Command, v : VHS) : Exception?
+    window_bar_size = cmd.args.to_i32?
+    if window_bar_size.nil? || window_bar_size < 0
+      return Exception.new("invalid window bar size: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.window_bar_size = window_bar_size
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetBorderRadius applies the border radius on the vhs.
+  def self.execute_set_border_radius(cmd : Parser::Command, v : VHS) : Exception?
+    border_radius = cmd.args.to_i32?
+    if border_radius.nil? || border_radius < 0
+      return Exception.new("invalid border radius: #{cmd.args}")
+    end
+    opts = v.options.dup
+    style = opts.style.dup
+    style.border_radius = border_radius
+    opts.style = style
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetWaitPattern applies the wait pattern on the vhs.
+  def self.execute_set_wait_pattern(cmd : Parser::Command, v : VHS) : Exception?
+    begin
+      pattern = Regex.new(cmd.args)
+    rescue ex
+      return Exception.new("invalid regex pattern: #{cmd.args}")
+    end
+    opts = v.options.dup
+    opts.wait_pattern = pattern
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetWaitTimeout applies the wait timeout on the vhs.
+  def self.execute_set_wait_timeout(cmd : Parser::Command, v : VHS) : Exception?
+    duration_str = cmd.args
+    seconds = 0.0
+
+    if duration_str.ends_with?("ms")
+      ms = duration_str[0...-2].to_f? || 0.0
+      seconds = ms / 1000.0
+    elsif duration_str.ends_with?("s")
+      s = duration_str[0...-1].to_f? || 0.0
+      seconds = s
+    else
+      # Assume milliseconds
+      ms = duration_str.to_f? || 0.0
+      seconds = ms / 1000.0
+    end
+
+    if seconds <= 0.0
+      return Exception.new("invalid wait timeout: #{cmd.args}")
+    end
+
+    wait_timeout = seconds.seconds
+    opts = v.options.dup
+    opts.wait_timeout = wait_timeout
+    v.options = opts
+    nil
+  end
+
+  # ExecuteSetCursorBlink applies the cursor blink on the vhs.
+  def self.execute_set_cursor_blink(cmd : Parser::Command, v : VHS) : Exception?
+    value = cmd.args.downcase
+    cursor_blink = case value
+                   when "true", "on", "yes", "1"
+                     true
+                   when "false", "off", "no", "0"
+                     false
+                   else
+                     return Exception.new("invalid cursor blink value: #{cmd.args}")
+                   end
+    opts = v.options.dup
+    opts.cursor_blink = cursor_blink
     v.options = opts
     nil
   end
@@ -791,28 +1289,55 @@ module Vhs
   # valid go struct.
   # https://xtermjs.org/docs/api/terminal/interfaces/itheme/
   struct Theme
-    property name : String
-    property background : String
-    property foreground : String
-    property selection : String
-    property cursor : String
-    property cursor_accent : String
-    property black : String
-    property bright_black : String
-    property red : String
-    property bright_red : String
-    property green : String
-    property bright_green : String
-    property yellow : String
-    property bright_yellow : String
-    property blue : String
-    property bright_blue : String
-    property magenta : String
-    property bright_magenta : String
-    property cyan : String
-    property bright_cyan : String
-    property white : String
-    property bright_white : String
+    include JSON::Serializable
+
+    property name : String = ""
+    @[JSON::Field(key: "background")]
+    property background : String = ""
+    @[JSON::Field(key: "foreground")]
+    property foreground : String = ""
+    @[JSON::Field(key: "selection")]
+    property selection : String = ""
+    @[JSON::Field(key: "cursor")]
+    property cursor : String = ""
+    @[JSON::Field(key: "cursorAccent")]
+    property cursor_accent : String = ""
+    @[JSON::Field(key: "black")]
+    property black : String = ""
+    @[JSON::Field(key: "brightBlack")]
+    property bright_black : String = ""
+    @[JSON::Field(key: "red")]
+    property red : String = ""
+    @[JSON::Field(key: "brightRed")]
+    property bright_red : String = ""
+    @[JSON::Field(key: "green")]
+    property green : String = ""
+    @[JSON::Field(key: "brightGreen")]
+    property bright_green : String = ""
+    @[JSON::Field(key: "yellow")]
+    property yellow : String = ""
+    @[JSON::Field(key: "brightYellow")]
+    property bright_yellow : String = ""
+    @[JSON::Field(key: "blue")]
+    property blue : String = ""
+    @[JSON::Field(key: "brightBlue")]
+    property bright_blue : String = ""
+    @[JSON::Field(key: "magenta")]
+    property magenta : String = ""
+    @[JSON::Field(key: "brightMagenta")]
+    property bright_magenta : String = ""
+    @[JSON::Field(key: "cyan")]
+    property cyan : String = ""
+    @[JSON::Field(key: "brightCyan")]
+    property bright_cyan : String = ""
+    @[JSON::Field(key: "white")]
+    property white : String = ""
+    @[JSON::Field(key: "brightWhite")]
+    property bright_white : String = ""
+
+    # Ignore extra fields like "meta"
+    @[JSON::Field(ignore: true)]
+    property meta : JSON::Any? = nil
 
     def initialize(
       *,
@@ -838,64 +1363,32 @@ module Vhs
       @bright_cyan = "",
       @white = "",
       @bright_white = "",
+      @meta = nil,
     )
     end
+  end
 
-    def to_json : String
-      JSON.build do |json|
-        json.object do
-          json.field "name", name
-          json.field "background", background
-          json.field "foreground", foreground
-          json.field "selection", selection
-          json.field "cursor", cursor
-          json.field "cursorAccent", cursor_accent
-          json.field "black", black
-          json.field "brightBlack", bright_black
-          json.field "red", red
-          json.field "brightRed", bright_red
-          json.field "green", green
-          json.field "brightGreen", bright_green
-          json.field "yellow", yellow
-          json.field "brightYellow", bright_yellow
-          json.field "blue", blue
-          json.field "brightBlue", bright_blue
-          json.field "magenta", magenta
-          json.field "brightMagenta", bright_magenta
-          json.field "cyan", cyan
-          json.field "brightCyan", bright_cyan
-          json.field "white", white
-          json.field "brightWhite", bright_white
-        end
-      end
+  # get_theme returns a Theme for the given string.
+  # If the string is empty or whitespace, returns DEFAULT_THEME.
+  # If the string starts with '{', it is parsed as JSON.
+  # Otherwise, it is treated as a theme name and looked up in themes.json.
+  def self.get_theme(s : String) : Theme
+    s = s.strip
+    if s.empty?
+      return DEFAULT_THEME
     end
 
-    def self.from_json(json : String) : Theme
-      parsed = JSON.parse(json)
-      Theme.new(
-        name: parsed["name"]?.try(&.as_s) || "",
-        background: parsed["background"]?.try(&.as_s) || "",
-        foreground: parsed["foreground"]?.try(&.as_s) || "",
-        selection: parsed["selection"]?.try(&.as_s) || "",
-        cursor: parsed["cursor"]?.try(&.as_s) || "",
-        cursor_accent: parsed["cursorAccent"]?.try(&.as_s) || "",
-        black: parsed["black"]?.try(&.as_s) || "",
-        bright_black: parsed["brightBlack"]?.try(&.as_s) || "",
-        red: parsed["red"]?.try(&.as_s) || "",
-        bright_red: parsed["brightRed"]?.try(&.as_s) || "",
-        green: parsed["green"]?.try(&.as_s) || "",
-        bright_green: parsed["brightGreen"]?.try(&.as_s) || "",
-        yellow: parsed["yellow"]?.try(&.as_s) || "",
-        bright_yellow: parsed["brightYellow"]?.try(&.as_s) || "",
-        blue: parsed["blue"]?.try(&.as_s) || "",
-        bright_blue: parsed["brightBlue"]?.try(&.as_s) || "",
-        magenta: parsed["magenta"]?.try(&.as_s) || "",
-        bright_magenta: parsed["brightMagenta"]?.try(&.as_s) || "",
-        cyan: parsed["cyan"]?.try(&.as_s) || "",
-        bright_cyan: parsed["brightCyan"]?.try(&.as_s) || "",
-        white: parsed["white"]?.try(&.as_s) || "",
-        bright_white: parsed["brightWhite"]?.try(&.as_s) || ""
-      )
+    case s[0]
+    when '{'
+      # JSON theme
+      begin
+        return Theme.from_json(s)
+      rescue ex : JSON::ParseException
+        raise InvalidThemeError.new(s, ex)
+      end
+    else
+      # Named theme
+      find_theme(s)
     end
   end
 
