@@ -34,11 +34,11 @@ command.go::func::ExecuteSetWaitTimeout	missing	-	baseline
 command.go::func::ExecuteSetWidth	missing	-	baseline
 command.go::func::ExecuteSetWindowBar	missing	-	baseline
 command.go::func::ExecuteSetWindowBarSize	missing	-	baseline
-command.go::func::ExecuteShift	missing	-	baseline
+command.go::func::ExecuteShift	partial	src/vhs/evaluator.cr:712	Terminal-backed Shift execution exists and has basic evaluator coverage; browser-action parity remains to be confirmed.
 command.go::func::ExecuteShow	missing	-	baseline
 command.go::func::ExecuteSleep	missing	-	baseline
 command.go::func::ExecuteType	missing	-	baseline
-command.go::func::ExecuteWait	missing	-	baseline
+command.go::func::ExecuteWait	partial	src/vhs/evaluator.cr:546	Default scope parsing and wait behavior now match upstream for the baseline case; broader timeout/message parity remains open.
 command.go::type::CommandFunc	missing	-	baseline
 draw.go::func::MakeBorderRadiusMask	missing	-	baseline
 draw.go::func::MakeWindowBar	missing	-	baseline

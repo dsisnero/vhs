@@ -544,14 +544,9 @@ module Vhs
 
   # ExecuteWait is a CommandFunc that waits for a regex match for the given amount of time.
   def self.execute_wait(cmd : Parser::Command, v : VHS) : Exception?
-    args = cmd.args
-    options = cmd.options
-
-    # Parse timeout from options if present
     timeout = v.options.wait_timeout
-    if !options.empty?
-      # Parse duration string (similar to sleep)
-      duration_str = options
+    if !cmd.options.empty?
+      duration_str = cmd.options
       seconds = 0.0
       if duration_str.ends_with?("ms")
         ms = duration_str[0...-2].to_f? || 0.0
@@ -566,53 +561,55 @@ module Vhs
       timeout = seconds.seconds
     end
 
-    # Parse scope and regex from args
-    parts = args.split(' ', 2)
     scope = "Line"
     pattern = v.options.wait_pattern
-    if parts.size == 2
-      scope = parts[0]
-      pattern_str = parts[1]
-      begin
-        pattern = Regex.new(pattern_str)
-      rescue ex
-        return Exception.new("invalid regex: #{ex.message}")
-      end
-    elsif parts.size == 1 && !parts[0].empty?
-      pattern_str = parts[0]
-      begin
-        pattern = Regex.new(pattern_str)
-      rescue ex
-        return Exception.new("invalid regex: #{ex.message}")
+    args = cmd.args.strip
+    unless args.empty?
+      parts = args.split(' ', 2)
+      first = parts[0]
+      if first == "Line" || first == "Screen"
+        scope = first
+        if parts.size == 2
+          begin
+            pattern = Regex.new(parts[1])
+          rescue ex
+            return Exception.new("invalid regex: #{ex.message}")
+          end
+        end
+      else
+        begin
+          pattern = Regex.new(first)
+        rescue ex
+          return Exception.new("invalid regex: #{ex.message}")
+        end
       end
     end
 
-    # Validate scope
     unless {"Line", "Screen"}.includes?(scope)
       return Exception.new("invalid scope: #{scope}")
     end
 
     start_time = Time.instant
     tick = 10.milliseconds
+    last_value = ""
 
     while (Time.instant - start_time) < timeout
       case scope
       when "Line"
-        line = v.current_line
-        if pattern.matches?(line)
+        last_value = v.current_line
+        if pattern.matches?(last_value)
           return nil
         end
       when "Screen"
-        buffer = v.buffer
-        text = buffer.join("\n")
-        if pattern.matches?(text)
+        last_value = v.buffer.join("\n")
+        if pattern.matches?(last_value)
           return nil
         end
       end
       sleep tick
     end
 
-    Exception.new("timeout waiting for pattern #{pattern}")
+    Exception.new("timeout waiting for #{cmd.args.inspect} to match #{pattern.inspect}; last value was: #{last_value}")
   end
 
   # ExecuteCtrl is a CommandFunc that presses the argument keys and/or modifiers

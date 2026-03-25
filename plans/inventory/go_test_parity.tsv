@@ -1,5 +1,5 @@
 # source_test_id	status	crystal_refs	notes
-command_test.go::test::TestCommand	missing	-	baseline
+command_test.go::test::TestCommand	partial	spec/vhs/evaluator_spec.cr:119; spec/vhs/evaluator_spec.cr:150	Crystal now has direct evaluator coverage for Wait and Shift execution, but it does not yet include an aggregate command-count parity assertion.
 command_test.go::test::TestExecuteSetTheme	missing	-	baseline
 lexer/lexer_test.go::test::TestLexTapeFile	missing	-	baseline
 lexer/lexer_test.go::test::TestNextToken	missing	-	baseline

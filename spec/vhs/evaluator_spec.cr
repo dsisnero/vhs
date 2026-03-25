@@ -2,6 +2,24 @@ require "../spec_helper"
 require "file_utils"
 
 module Vhs
+  class FakeWaitVHS < Vhs::VHS
+    property line_value : String
+    property screen_value : Array(String)
+
+    def initialize(@line_value : String, @screen_value : Array(String), options : Vhs::Options)
+      super()
+      @options = options
+    end
+
+    def current_line : String
+      @line_value
+    end
+
+    def buffer : Array(String)
+      @screen_value
+    end
+  end
+
   describe "evaluator" do
     describe ".evaluate" do
       it "executes simple tape without errors" do
@@ -98,7 +116,14 @@ module Vhs
         errors.should_not be_empty
       end
 
-      pending "executes Wait command"
+      it "executes Wait command with the default line scope and regex" do
+        options = Vhs.default_vhs_options
+        options.wait_pattern = /prompt/
+        v = FakeWaitVHS.new("prompt", ["prompt"], options)
+
+        cmd = Vhs::Parser::Command.new(Vhs::Token::WAIT, "", "Line")
+        Vhs.execute_wait(cmd, v).should be_nil
+      end
 
       it "executes Ctrl command" do
         tape = <<-TAPE
@@ -122,7 +147,19 @@ module Vhs
         errors.should be_empty
       end
 
-      pending "executes Shift command"
+      it "executes Shift command" do
+        tape = <<-TAPE
+        Output test.gif
+        Type "cat"
+        Enter
+        Shift+A
+        Enter
+        Sleep 0.1s
+        TAPE
+
+        errors = Vhs.evaluate(tape)
+        errors.should be_empty
+      end
 
       it "executes key commands" do
         tape = <<-TAPE
