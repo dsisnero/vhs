@@ -1,7 +1,8 @@
-/docs/
 /lib/
 /bin/
 /.shards/
 *.dwarf
 /.crystal-cache/
 /.beads/
+.claude/
+/temp/

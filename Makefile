@@ -7,23 +7,23 @@ update:
 	BEADS_DIR=$$(pwd)/.beads shards update
 
 format:
-	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache crystal tool format --check
+	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache crystal tool format --check src spec bin
 
 lint:
-	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache ameba --fix
-	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache ameba
+	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache ameba --fix src spec bin
+	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache ameba src spec bin
 
 test:
 	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache crystal spec
 
 markdown:
-	rumdl fmt .
+	rumdl fmt README.md docs
 
 markdown-check:
-	rumdl check . --check
+	rumdl check README.md docs --check
 
 clean:
-	rm -rf temp/*
+	rm -rf ./temp/*
 
 build:
 	mkdir -p bin
