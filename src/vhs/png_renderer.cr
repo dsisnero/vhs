@@ -7,6 +7,67 @@ module Vhs
   module PNGRenderer
     extend self
 
+    MONOSPACE_FONTCONFIG_SPACING = "100"
+
+    # Resolves font family name to a font file path.
+    # Tries fc-match first, falls back to bundled Roboto font.
+    private def resolve_font_path(font_family : String) : String
+      # If font_family looks like a file path (ends with .ttf/.otf or absolute path)
+      if font_family.ends_with?(".ttf") || font_family.ends_with?(".otf") || font_family.starts_with?("/")
+        if File.exists?(font_family)
+          return font_family
+        end
+      end
+
+      candidates = font_family.split(',').map(&.strip).reject(&.empty?)
+      candidates = [font_family] if candidates.empty?
+
+      # Prefer the first monospace system font from the fallback list.
+      candidates.each do |candidate|
+        file_path, spacing = match_font(candidate)
+        if file_path && spacing == MONOSPACE_FONTCONFIG_SPACING
+          return file_path
+        end
+      end
+
+      # Fall back to the first resolvable font if no monospace match was found.
+      candidates.each do |candidate|
+        file_path, _spacing = match_font(candidate)
+        return file_path if file_path
+      end
+
+      # Fallback to bundled Roboto font (for development)
+      bundled_path = File.expand_path("../../lib/crimage/spec/testdata/fonts/Roboto/Roboto-Bold.ttf", __DIR__)
+      if File.exists?(bundled_path)
+        return bundled_path
+      end
+
+      raise "Could not resolve font family '#{font_family}'. Install fontconfig or provide full font path."
+    end
+
+    private def match_font(font_family : String) : {String?, String?}
+      output = IO::Memory.new
+      error = IO::Memory.new
+      cache_dir = File.expand_path("../../temp/fontconfig-cache", __DIR__)
+      Dir.mkdir_p(cache_dir)
+      status = Process.run(
+        "fc-match",
+        ["-f", "%{file}\n%{spacing}\n", font_family],
+        env: {"XDG_CACHE_HOME" => cache_dir},
+        output: output,
+        error: error
+      )
+
+      return {nil, nil} unless status.success?
+
+      lines = output.to_s.lines.map(&.strip)
+      file_path = lines[0]?.presence
+      spacing = lines[1]?.presence
+      return {nil, nil} unless file_path && File.exists?(file_path)
+
+      {file_path, spacing}
+    end
+
     # Renders terminal buffer to PNG file.
     # @param buffer [Array(Array(Char))] 2D array of characters (rows x columns)
     # @param output_path [String] path to save PNG
@@ -20,8 +81,8 @@ module Vhs
                font_family : String = "DejaVu Sans Mono", font_size : Int32 = 22,
                letter_spacing : Float64 = 1.0, line_height : Float64 = 1.0,
                foreground : String = "#dddddd", background : String = "#171717")
-      # Load font (hardcoded for now)
-      font_path = File.expand_path("../../lib/crimage/spec/testdata/fonts/Roboto/Roboto-Bold.ttf", __DIR__)
+      # Load font using font family resolution
+      font_path = resolve_font_path(font_family)
       unless File.exists?(font_path)
         raise "Font file not found: #{font_path}"
       end

@@ -19,5 +19,20 @@ module Vhs
         File.delete(output_path) if File.exists?(output_path)
       end
     end
+
+    it "renders with a comma-separated font fallback list" do
+      buffer = [
+        ['O', 'K'],
+      ]
+
+      output_path = File.tempname(suffix: ".png")
+      font_family = "JetBrains Mono,DejaVu Sans Mono,Menlo,monospace"
+      begin
+        PNGRenderer.render(buffer, output_path, font_family: font_family, font_size: 24)
+        File.exists?(output_path).should be_true
+      ensure
+        File.delete(output_path) if File.exists?(output_path)
+      end
+    end
   end
 end
