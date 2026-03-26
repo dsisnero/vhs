@@ -4,10 +4,43 @@ module Vhs
   describe "command functions" do
     describe ".command_funcs" do
       it "has the correct number of command functions" do
-        # Count command functions in evaluator
-        command_funcs_count = Vhs.command_funcs.size
-        # The Go test expects 32 command functions (includes HOME, END, SOURCE)
-        command_funcs_count.should eq(32)
+        Vhs.command_funcs.size.should eq(29)
+      end
+
+      it "matches the upstream command function key set" do
+        Vhs.command_funcs.keys.to_set.should eq(
+          Set{
+            Vhs::Token::BACKSPACE,
+            Vhs::Token::DELETE,
+            Vhs::Token::INSERT,
+            Vhs::Token::CTRL,
+            Vhs::Token::ALT,
+            Vhs::Token::DOWN,
+            Vhs::Token::ENTER,
+            Vhs::Token::ESCAPE,
+            Vhs::Token::ILLEGAL,
+            Vhs::Token::LEFT,
+            Vhs::Token::PAGE_UP,
+            Vhs::Token::PAGE_DOWN,
+            Vhs::Token::RIGHT,
+            Vhs::Token::SET,
+            Vhs::Token::OUTPUT,
+            Vhs::Token::SLEEP,
+            Vhs::Token::SPACE,
+            Vhs::Token::HIDE,
+            Vhs::Token::REQUIRE,
+            Vhs::Token::SHOW,
+            Vhs::Token::TAB,
+            Vhs::Token::TYPE,
+            Vhs::Token::UP,
+            Vhs::Token::WAIT,
+            Vhs::Token::SCREENSHOT,
+            Vhs::Token::COPY,
+            Vhs::Token::PASTE,
+            Vhs::Token::ENV,
+            Vhs::Token::SHIFT,
+          }
+        )
       end
     end
 

@@ -326,9 +326,6 @@ module Vhs
       hash[Token::ESCAPE] = execute_key("Escape")
       hash[Token::PAGE_UP] = execute_key("PageUp")
       hash[Token::PAGE_DOWN] = execute_key("PageDown")
-      hash[Token::HOME] = execute_key("Home")
-      hash[Token::END] = execute_key("End")
-      hash[Token::SOURCE] = ->(cmd : Parser::Command, v : VHS) : Exception? { execute_source(cmd, v) }
       hash
     end
   end
