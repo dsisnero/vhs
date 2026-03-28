@@ -101,13 +101,13 @@ parser/parser_test.go::test::TestParser	test	missing	-	auto-generated
 parser/parser_test.go::test::TestParserErrors	test	missing	-	auto-generated
 publish.go::func::Publish	func	missing	-	auto-generated
 record.go::func::Record	func	missing	-	auto-generated
-record_test.go::test::TestInputToTape	test	missing	-	auto-generated
-record_test.go::test::TestInputToTapeLongSleep	test	missing	-	auto-generated
-record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	test	missing	-	auto-generated
+record_test.go::test::TestInputToTape	test	ported	spec/vhs/record_spec.cr:4	Crystal mirrors the upstream input-to-tape conversion scenarios for control sequences, repeated navigation keys, and compressed command output.
+record_test.go::test::TestInputToTapeLongSleep	test	ported	spec/vhs/record_spec.cr:92	Crystal covers the upstream long-sleep compression case and matches the expected aggregated duration output.
+record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	test	ported	spec/vhs/record_spec.cr:102	Crystal covers the upstream post-exit sleep handling and preserves the expected exit plus aggregated sleep output.
 screenshot.go::func::MakeScreenshots	func	missing	-	auto-generated
 screenshot.go::func::NewScreenshotOptions	func	missing	-	auto-generated
 screenshot.go::struct::ScreenshotOptions	struct	missing	-	auto-generated
-screenshot_test.go::test::TestScreenshot	test	missing	-	auto-generated
+screenshot_test.go::test::TestScreenshot	test	ported	spec/vhs/screenshot_spec.cr:4	Crystal covers screenshot capture toggling and screenshot frame bookkeeping through ScreenshotOptions.make_screenshot and enable_frame_capture.
 shell.go::struct::Shell	struct	missing	-	auto-generated
 style.go::const::Background	const	missing	-	auto-generated
 style.go::const::Black	const	missing	-	auto-generated

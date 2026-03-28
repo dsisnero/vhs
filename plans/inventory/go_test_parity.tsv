@@ -9,10 +9,10 @@ parser/parser_test.go::test::TestParseSource	missing	-	baseline
 parser/parser_test.go::test::TestParseTapeFile	missing	-	baseline
 parser/parser_test.go::test::TestParser	missing	-	baseline
 parser/parser_test.go::test::TestParserErrors	missing	-	baseline
-record_test.go::test::TestInputToTape	missing	-	baseline
-record_test.go::test::TestInputToTapeLongSleep	missing	-	baseline
-record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	missing	-	baseline
-screenshot_test.go::test::TestScreenshot	missing	-	baseline
+record_test.go::test::TestInputToTape	ported	spec/vhs/record_spec.cr:4	Crystal mirrors the upstream input-to-tape conversion scenarios for control sequences, repeated navigation keys, and compressed command output.
+record_test.go::test::TestInputToTapeLongSleep	ported	spec/vhs/record_spec.cr:92	Crystal covers the upstream long-sleep compression case and matches the expected aggregated duration output.
+record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	ported	spec/vhs/record_spec.cr:102	Crystal covers the upstream post-exit sleep handling and preserves the expected exit plus aggregated sleep output.
+screenshot_test.go::test::TestScreenshot	ported	spec/vhs/screenshot_spec.cr:4	Crystal covers screenshot capture toggling and screenshot frame bookkeeping through ScreenshotOptions.make_screenshot and enable_frame_capture.
 themes_test.go::test::TestFindAllThemes	ported	spec/vhs/themes_spec.cr:5	Crystal verifies that sorted_theme_names loads the full upstream theme set and matches the expected count.
 themes_test.go::test::TestFindTheme	ported	spec/vhs/themes_spec.cr:13; spec/vhs/command_spec.cr:57	Crystal covers exact-match, suggestion, no-match, single-character, empty-string, JSON, invalid JSON, and unknown-theme resolution paths.
 token/token_test.go::test::TestToCamel	missing	-	baseline
