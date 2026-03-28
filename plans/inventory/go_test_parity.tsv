@@ -13,6 +13,6 @@ record_test.go::test::TestInputToTape	missing	-	baseline
 record_test.go::test::TestInputToTapeLongSleep	missing	-	baseline
 record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	missing	-	baseline
 screenshot_test.go::test::TestScreenshot	missing	-	baseline
-themes_test.go::test::TestFindAllThemes	missing	-	baseline
-themes_test.go::test::TestFindTheme	missing	-	baseline
+themes_test.go::test::TestFindAllThemes	ported	spec/vhs/themes_spec.cr:5	Crystal verifies that sorted_theme_names loads the full upstream theme set and matches the expected count.
+themes_test.go::test::TestFindTheme	ported	spec/vhs/themes_spec.cr:13; spec/vhs/command_spec.cr:57	Crystal covers exact-match, suggestion, no-match, single-character, empty-string, JSON, invalid JSON, and unknown-theme resolution paths.
 token/token_test.go::test::TestToCamel	missing	-	baseline

@@ -140,8 +140,8 @@ themes.go::method::Theme.String	method	missing	-	auto-generated
 themes.go::method::ThemeNotFoundError.Error	method	missing	-	auto-generated
 themes.go::struct::Theme	struct	missing	-	auto-generated
 themes.go::struct::ThemeNotFoundError	struct	missing	-	auto-generated
-themes_test.go::test::TestFindAllThemes	test	missing	-	auto-generated
-themes_test.go::test::TestFindTheme	test	missing	-	auto-generated
+themes_test.go::test::TestFindAllThemes	test	ported	spec/vhs/themes_spec.cr:5	Crystal verifies that sorted_theme_names loads the full upstream theme set and matches the expected count.
+themes_test.go::test::TestFindTheme	test	ported	spec/vhs/themes_spec.cr:13; spec/vhs/command_spec.cr:57	Crystal covers exact-match, suggestion, no-match, single-character, empty-string, JSON, invalid JSON, and unknown-theme resolution paths.
 token/token.go::const::ALT	const	missing	-	auto-generated
 token/token.go::const::AT	const	missing	-	auto-generated
 token/token.go::const::BACKSLASH	const	missing	-	auto-generated
