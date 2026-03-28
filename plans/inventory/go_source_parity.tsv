@@ -27,7 +27,7 @@ command.go::func::ExecuteSetMarginFill	missing	-	baseline
 command.go::func::ExecuteSetPadding	missing	-	baseline
 command.go::func::ExecuteSetPlaybackSpeed	missing	-	baseline
 command.go::func::ExecuteSetShell	missing	-	baseline
-command.go::func::ExecuteSetTheme	missing	-	baseline
+command.go::func::ExecuteSetTheme	mapped	src/vhs/evaluator.cr:834	Theme execution routes through get_theme and applies the resolved Theme to VHS options with coverage for the upstream theme-resolution cases.
 command.go::func::ExecuteSetTypingSpeed	missing	-	baseline
 command.go::func::ExecuteSetWaitPattern	missing	-	baseline
 command.go::func::ExecuteSetWaitTimeout	missing	-	baseline

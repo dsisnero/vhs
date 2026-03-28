@@ -1,6 +1,6 @@
 # source_test_id	status	crystal_refs	notes
 command_test.go::test::TestCommand	ported	spec/vhs/command_spec.cr:5; spec/vhs/evaluator_spec.cr:119; spec/vhs/evaluator_spec.cr:150	Crystal now matches the upstream command function count and key set, and also has direct evaluator coverage for Wait and Shift execution.
-command_test.go::test::TestExecuteSetTheme	missing	-	baseline
+command_test.go::test::TestExecuteSetTheme	ported	spec/vhs/command_spec.cr:57; spec/vhs/evaluator_spec.cr:46	Crystal covers the upstream theme-resolution scenarios and evaluator-level Set Theme behavior.
 lexer/lexer_test.go::test::TestLexTapeFile	missing	-	baseline
 lexer/lexer_test.go::test::TestNextToken	missing	-	baseline
 parser/parser_test.go::test::TestParseCtrl	missing	-	baseline

@@ -27,7 +27,7 @@ command.go::func::ExecuteSetMarginFill	func	missing	-	auto-generated
 command.go::func::ExecuteSetPadding	func	missing	-	auto-generated
 command.go::func::ExecuteSetPlaybackSpeed	func	missing	-	auto-generated
 command.go::func::ExecuteSetShell	func	missing	-	auto-generated
-command.go::func::ExecuteSetTheme	func	missing	-	auto-generated
+command.go::func::ExecuteSetTheme	func	ported	src/vhs/evaluator.cr:834; spec/vhs/command_spec.cr:57; spec/vhs/evaluator_spec.cr:46	Theme resolution and Set Theme execution are covered for empty input, named themes, JSON themes, suggestion errors, invalid JSON, and unknown themes.
 command.go::func::ExecuteSetTypingSpeed	func	missing	-	auto-generated
 command.go::func::ExecuteSetWaitPattern	func	missing	-	auto-generated
 command.go::func::ExecuteSetWaitTimeout	func	missing	-	auto-generated
@@ -41,7 +41,7 @@ command.go::func::ExecuteType	func	missing	-	auto-generated
 command.go::func::ExecuteWait	func	partial	src/vhs/evaluator.cr:546; spec/vhs/evaluator_spec.cr:119	Default Line-scope wait behavior is covered; timeout and full upstream error parity still need broader verification.
 command.go::type::CommandFunc	type	missing	-	auto-generated
 command_test.go::test::TestCommand	test	ported	spec/vhs/command_spec.cr:5; spec/vhs/evaluator_spec.cr:119; spec/vhs/evaluator_spec.cr:150	Crystal now matches the upstream command function count and key set, and also has direct evaluator coverage for Wait and Shift execution.
-command_test.go::test::TestExecuteSetTheme	test	missing	-	auto-generated
+command_test.go::test::TestExecuteSetTheme	test	ported	spec/vhs/command_spec.cr:57; spec/vhs/evaluator_spec.cr:46	Crystal covers the same theme-resolution scenarios as upstream command_test, plus evaluator-level Set Theme command behavior.
 draw.go::func::MakeBorderRadiusMask	func	missing	-	auto-generated
 draw.go::func::MakeWindowBar	func	missing	-	auto-generated
 draw.go::method::circle.At	method	missing	-	auto-generated
