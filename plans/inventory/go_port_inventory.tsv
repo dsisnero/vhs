@@ -77,11 +77,11 @@ ffmpeg.go::method::StreamBuilder.WithMargin	method	missing	-	auto-generated
 ffmpeg.go::method::StreamBuilder.WithWebm	method	missing	-	auto-generated
 ffmpeg.go::struct::FilterComplexBuilder	struct	missing	-	auto-generated
 ffmpeg.go::struct::StreamBuilder	struct	missing	-	auto-generated
-lexer/lexer.go::func::New	func	missing	-	auto-generated
-lexer/lexer.go::method::Lexer.NextToken	method	missing	-	auto-generated
-lexer/lexer.go::struct::Lexer	struct	missing	-	auto-generated
-lexer/lexer_test.go::test::TestLexTapeFile	test	missing	-	auto-generated
-lexer/lexer_test.go::test::TestNextToken	test	missing	-	auto-generated
+lexer/lexer.go::func::New	func	ported	src/vhs/lexer.cr:14, spec/vhs/lexer_spec.cr:298	Crystal spells it Lexer#initialize; asserted through the upstream TestNextToken table and the existing lexer specs.
+lexer/lexer.go::method::Lexer.NextToken	method	ported	src/vhs/lexer.cr:25, spec/vhs/lexer_spec.cr:298	Token-for-token port of upstream TestNextToken (81 expectations, including the escaped-regex cases) plus the all.tape fixture table (199 expectations).
+lexer/lexer.go::struct::Lexer	struct	ported	src/vhs/lexer.cr:5, spec/vhs/lexer_spec.cr:335	Same input/pos/next_pos/line/column state; the all.tape token stream exercises comments, strings, JSON themes, numbers, units, and key sequences.
+lexer/lexer_test.go::test::TestLexTapeFile	test	ported	spec/vhs/lexer_spec.cr:335	Ports the upstream all.tape expectations (199 pairs) against the checked-in spec/fixtures/all.tape copy of the upstream fixture.
+lexer/lexer_test.go::test::TestNextToken	test	ported	spec/vhs/lexer_spec.cr:298	Ports the upstream tape input and all 81 expected (type, literal) pairs verbatim, including the escaped-regex cases.
 parser/parser.go::func::New	func	missing	-	auto-generated
 parser/parser.go::func::NewError	func	missing	-	auto-generated
 parser/parser.go::method::Command.String	method	missing	-	auto-generated

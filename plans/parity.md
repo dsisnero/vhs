@@ -9,20 +9,18 @@ are*, not *how the repo works*.
 ## Where we are
 
 - **Current focus:** finish reconciling the curated ledger with the code already
-  in `src/`. `command.go`, `style.go`, `error.go`, `evaluator.go` and
-  `token/token.go` (85 rows + `TestToCamel`) are reconciled. Next is
-  `parser/parser.go` (12) and `lexer/lexer.go` (3), where the code exists and
-  only ledger work plus the six `parser_test.go`/two `lexer_test.go` IDs remain.
+  in `src/`. `command.go`, `style.go`, `error.go`, `evaluator.go`,
+  `token/token.go` (85 rows + `TestToCamel`) and `lexer/lexer.go` (3 rows + both
+  upstream lexer tests) are reconciled. Next is `parser/parser.go` (12 rows) and
+  its six upstream test IDs — the last unledgered implementation block.
 - **Next up:**
-  1. Reconcile `parser/parser.go` (12) and `lexer/lexer.go` (3) rows, then map
-     their upstream tests: `parser_test.go` (`TestParser`, `TestParserErrors`,
-     `TestParseCtrl`, `TestParseScreeenshot`, `TestParseSource`,
-     `TestParseTapeFile`) and `lexer_test.go` (`TestNextToken`,
-     `TestLexTapeFile`).
-  2. Reconcile the remaining source rows: `vhs.go` (13), `draw.go` (11),
-     `video.go` (6), `testing.go` (5), `themes.go` (4), `screenshot.go` (3),
-     `record.go` (1), `shell.go` (1).
-  3. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
+  1. Reconcile `parser/parser.go` (12) and port its upstream tests:
+     `TestParser`, `TestParserErrors`, `TestParseCtrl`, `TestParseScreeenshot`,
+     `TestParseSource`, `TestParseTapeFile` (429 lines of Go table tests).
+  2. Reconcile the remaining source rows: `ffmpeg.go` (16), `vhs.go` (13),
+     `draw.go` (11), `video.go` (6), `testing.go` (5), `themes.go` (4),
+     `screenshot.go` (3), `record.go` (1), `shell.go` (1).
+  3. Port `ffmpeg.go`'s filter/stream builders — today
      `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
      spec coverage.
   4. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
@@ -31,8 +29,12 @@ are*, not *how the repo works*.
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
     table, and exact IsSetting/IsCommand/IsModifier membership sets.
-  - Lexer / parser: implemented in `src/vhs/{lexer,parser}.cr` with specs;
-    ledger rows still `missing` (15 source rows + 8 test IDs).
+  - Lexer: all 3 `lexer/lexer.go` rows `ported` and both upstream lexer tests
+    ported — `spec/vhs/lexer_spec.cr` now replays the 81-expectation
+    `TestNextToken` tape and the 199-expectation `all.tape` fixture table
+    (checked in as `spec/fixtures/all.tape`).
+  - Parser: implemented in `src/vhs/parser.cr` with specs; the 12 source rows
+    and six `parser_test.go` IDs are still `missing`.
   - Evaluate entrypoint: `EvaluatorOption` is `ported` (alias applied after
     stop, asserted by three specs); `Evaluate` itself is `partial` because the
     SET/OUTPUT/REQUIRE highlight print, dimension validation, and the render
@@ -89,18 +91,22 @@ are*, not *how the repo works*.
     with known gaps, `in_progress` means the implementation exists but nothing
     asserts it yet, and `intentional_divergence` is a deliberate surface
     difference listed below.
+  - `crystal tool format` re-escapes heredoc contents: generating the upstream
+    lexer tape with `<<-TAPE` (escape-processing) turned `/foo\/bar/` into
+    `/foo/bar/` and silently changed the test input. Use `<<-'TAPE'` for input
+    that must stay byte-identical, and re-check the content after formatting.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `c8341a2` port: reconcile token/token.go and drop the
   non-upstream Home keyword (working tree clean at that commit).
-- **Ledger `missing` rows left (85), by file:** `ffmpeg.go` 16, `vhs.go` 13,
+- **Ledger `missing` rows left (80), by file:** `ffmpeg.go` 16, `vhs.go` 13,
   `parser/parser.go` 12, `draw.go` 11, `video.go` 6, `testing.go` 5,
-  `themes.go` 4, `screenshot.go` 3, `lexer/lexer.go` 3, `record.go` 1,
-  `shell.go` 1, `publish.go` 1, `syntax.go` 1, plus the 8 remaining test IDs.
-- **Gates:** `make lint` pass (24 files); `make test` `113 examples, 0
+  `themes.go` 4, `screenshot.go` 3, `record.go` 1, `shell.go` 1,
+  `publish.go` 1, `syntax.go` 1, plus the six `parser_test.go` IDs.
+- **Gates:** `make lint` pass (24 files); `make test` `115 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 123 `ported`, 16 `partial`, 23 `in_progress`, 85 `missing`, 1
+  rows: 128 `ported`, 16 `partial`, 23 `in_progress`, 80 `missing`, 1
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -120,14 +126,15 @@ Keep this block accurate after every feature: the next session reads it first
 - [x] Reconcile `token/token.go` (85) — full constant/keyword/classification
       tables in `spec/vhs/token_spec.cr`; dropped the non-upstream `Home`
       keyword
-- [ ] Reconcile `parser/parser.go` (12), `lexer/lexer.go` (3) rows
+- [x] Reconcile `lexer/lexer.go` (3) and port both upstream lexer tests
+- [ ] Reconcile `parser/parser.go` (12) and port its six upstream tests
 - [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
       `screenshot.go` (3), `record.go`, `shell.go` rows
 - [ ] Regenerate `go_source_parity.tsv` and confirm `make inventory`
 
 ## Phase 2 — Upstream tests still unmapped
 
-- [ ] `lexer/lexer_test.go::TestNextToken`, `TestLexTapeFile`
+- [x] `lexer/lexer_test.go::TestNextToken`, `TestLexTapeFile`
 - [ ] `parser/parser_test.go` (`TestParser`, `TestParserErrors`,
       `TestParseCtrl`, `TestParseScreeenshot`, `TestParseSource`,
       `TestParseTapeFile`)
