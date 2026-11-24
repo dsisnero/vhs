@@ -62,6 +62,11 @@ are*, not *how the repo works*.
     (toolchain `v0.3.4` is installed) but discovers 378 Go items instead of 248
     because it reports native kinds (`function`, `class`, `interface`). Treat a
     parser switch as a reviewed ID migration, not a config change.
+  - Run the adversarial signoff as `PORT_PARSER=regex
+    verify_parity_adversarial.sh . vendor/vhs go 'make test' 'go test ./...'`.
+    Without `PORT_PARSER=regex` the script's `auto` mode probes tree-sitter and
+    fails with ~130 "source items missing from inventory" lines, which is the
+    parser mismatch above, not ledger debt.
   - The generated layer (`go_source_parity.tsv`, `go_test_parity.tsv`) was
     rebuilt with the canonical scripts: it now carries the `# kinds=` header and
     a `.metadata.json` sibling, and its statuses are always `missing`/`baseline`.
@@ -83,7 +88,7 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `dc4a050` port: reconcile command.go ledger rows against
+- **Last commit:** `4149cef` port: reconcile style.go ledger rows against
   evaluator.cr (working tree clean at that commit).
 - **Ledger `missing` rows left (178), by file:** `token/token.go` 85,
   `ffmpeg.go` 16, `vhs.go` 13, `parser/parser.go` 12, `draw.go` 11, `video.go`
@@ -93,9 +98,9 @@ are*, not *how the repo works*.
 - **Gates:** `make lint` pass (22 files); `make test` `94 examples, 0 failures`;
   `make inventory` pass (strict refs; 231 items tracked, 248 ledger rows: 31
   `ported`, 15 `partial`, 23 `in_progress`, 178 `missing`, 1
-  `intentional_divergence`); `verify_parity_adversarial.sh . vendor/vhs go
-  'make test' 'go test ./...'` pass; `check_kind_vocabulary.py --scan
-  go=vendor/vhs` no drops.
+  `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
+  vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
+  --scan go=vendor/vhs` no drops.
 
 Keep this block accurate after every feature: the next session reads it first
 (see `AGENTS.md` → **How to resume**).
