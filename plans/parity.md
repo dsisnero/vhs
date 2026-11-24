@@ -8,28 +8,32 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** make the curated ledger tell the truth. Most
-  `go_source_parity.tsv` rows still say `missing` for symbols the port already
-  implements (`command.go::func::Execute` → `src/vhs/evaluator.cr:374`,
-  `style.go` color constants → `src/vhs/evaluator.cr:9-27`). Until that is
-  reconciled, "missing" counts overstate the remaining work.
+- **Current focus:** finish reconciling the curated ledger with the code already
+  in `src/`. `command.go` is done (39 of its 41 symbols map 1:1 to
+  `Vhs::Evaluator.execute_*`); the remaining large blocks are `style.go` (21),
+  `token/token.go` (85), `parser/parser.go` (12), `vhs.go` (13), and
+  `draw.go` (11).
 - **Next up:**
-  1. Reconcile `go_source_parity.tsv` status/`crystal_refs` for `command.go`
-     (41 rows), `style.go` (21), `token/token.go` (85), `parser/parser.go` (12),
-     `vhs.go` (13), and `draw.go` (11) against `src/`.
-  2. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
+  1. Reconcile `style.go` (21 rows) against the color and lipgloss-style
+     constants in `src/vhs/evaluator.cr`.
+  2. Reconcile `token/token.go` (85), `parser/parser.go` (12), `lexer/lexer.go`
+     (3), `vhs.go` (13), `draw.go` (11), `themes.go` (4), `screenshot.go` (3),
+     `record.go`, and `shell.go` rows.
+  3. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
      in `go_test_parity.tsv` (`lexer/lexer_test.go`, `parser/parser_test.go`,
      `token/token_test.go`).
-  3. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
+  4. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
      `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
      spec coverage.
-  4. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
+  5. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
      `syntax.go`, `testing.go`, `man.go`.
 - **Status by area:**
   - Lexer / token / parser: implemented in `src/vhs/{lexer,token,parser}.cr`
     with specs; ledger rows still `missing` (100 rows).
-  - Command dispatch / evaluator: broad coverage in `src/vhs/evaluator.cr`;
-    only `Set Theme`, `Wait`, and `Shift` rows are promoted.
+  - Command dispatch / evaluator: all 41 `command.go` rows reconciled — 3
+    `ported`, 14 `partial`, 23 `in_progress`, 1 `intentional_divergence`. Only
+    Set Theme has upstream-asserted behavior; the rest record implementation
+    presence and name the missing assertions.
   - Renderers: `png_renderer.cr` has spec coverage; `ffmpeg_renderer.cr` is
     unverified and does not mirror upstream's builders.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows).
@@ -52,19 +56,30 @@ are*, not *how the repo works*.
     maintained `dsisnero/terminfo` fork.
   - `Metrics/CyclomaticComplexity` is excluded for `src/vhs/evaluator.cr` only,
     because the dispatch mirrors upstream's Go switches case for case.
-- **Last commit:** `2a8ea48` Make project scaffolding resumable and forward
-  parity gates to the installed skill
+  - Reconciliation follows evidence, not hopeful naming: `ported` requires a
+    spec that asserts upstream behavior, `partial` means some assertions exist
+    with known gaps, `in_progress` means the implementation exists but nothing
+    asserts it yet, and `intentional_divergence` is a deliberate surface
+    difference listed below.
+  - Specs write into `./temp`, so two suites running at once collide on the same
+    files (the `Source` command spec fails intermittently). Run gates serially;
+    the adversarial signoff runs a nested `make test`.
+- **Last commit:** `43865e8` Rebuild the generated parity layer with the
+  canonical skill scripts (this block covers the `command.go` reconcile that
+  follows it).
 - **Gates:** `make lint` pass; `make test` `90 examples, 0 failures`;
-  `make inventory` pass (231 port items, 231 API items, 17 tests, strict refs);
-  `verify_parity_adversarial.sh ... 'make test' 'go test ./...'` pass;
-  `check_kind_vocabulary.py --scan go=vendor/vhs` no drops.
+  `make inventory` pass (strict refs; 248 ledger rows: 11 `ported`, 14
+  `partial`, 23 `in_progress`, 199 `missing`, 1
+  `intentional_divergence`); `verify_parity_adversarial.sh . vendor/vhs go
+  'make test' 'go test ./...'` pass; `check_kind_vocabulary.py --scan
+  go=vendor/vhs` no drops.
 
 Keep this block accurate after every feature: the next session reads it first
 (see `AGENTS.md` → **How to resume**).
 
 ## Phase 1 — Ledger truth
 
-- [ ] Reconcile `command.go` rows (41) against `src/vhs/evaluator.cr`
+- [x] Reconcile `command.go` rows (41) against `src/vhs/evaluator.cr`
 - [ ] Reconcile `style.go` constants (21) against `src/vhs/evaluator.cr`
 - [ ] Reconcile `token/token.go` (85), `parser/parser.go` (12),
       `lexer/lexer.go` (3) rows
@@ -98,6 +113,9 @@ Keep this block accurate after every feature: the next session reads it first
 
 ## Intentional divergences
 
+- `WaitTick` (upstream `10 * time.Millisecond`): the port inlines
+  `10.milliseconds` in `Vhs::Evaluator.execute_wait` instead of exporting a
+  constant, so the row is `intentional_divergence` rather than `partial`.
 - `ScreenshotOptions#frame_capture?`: Crystal predicate naming for the upstream
   `FrameCapture` field; behavior is identical.
 - `src/vhs/evaluator.cr` keeps upstream's flat command dispatch (high cyclomatic

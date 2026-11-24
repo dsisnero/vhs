@@ -1,46 +1,46 @@
 # source_id	kind	status	crystal_refs	notes
 # kinds=class,const,func,function,interface,method,struct,type,test
-command.go::const::WaitTick	const	missing	-	auto-generated
-command.go::func::Execute	func	missing	-	auto-generated
-command.go::func::ExecuteAlt	func	missing	-	auto-generated
-command.go::func::ExecuteCopy	func	missing	-	auto-generated
-command.go::func::ExecuteCtrl	func	missing	-	auto-generated
-command.go::func::ExecuteEnv	func	missing	-	auto-generated
-command.go::func::ExecuteHide	func	missing	-	auto-generated
-command.go::func::ExecuteKey	func	missing	-	auto-generated
-command.go::func::ExecuteLoopOffset	func	missing	-	auto-generated
-command.go::func::ExecuteNoop	func	missing	-	auto-generated
-command.go::func::ExecuteOutput	func	missing	-	auto-generated
-command.go::func::ExecutePaste	func	missing	-	auto-generated
-command.go::func::ExecuteRequire	func	missing	-	auto-generated
-command.go::func::ExecuteScreenshot	func	missing	-	auto-generated
-command.go::func::ExecuteSet	func	missing	-	auto-generated
-command.go::func::ExecuteSetBorderRadius	func	missing	-	auto-generated
-command.go::func::ExecuteSetCursorBlink	func	missing	-	auto-generated
-command.go::func::ExecuteSetFontFamily	func	missing	-	auto-generated
-command.go::func::ExecuteSetFontSize	func	missing	-	auto-generated
-command.go::func::ExecuteSetFramerate	func	missing	-	auto-generated
-command.go::func::ExecuteSetHeight	func	missing	-	auto-generated
-command.go::func::ExecuteSetLetterSpacing	func	missing	-	auto-generated
-command.go::func::ExecuteSetLineHeight	func	missing	-	auto-generated
-command.go::func::ExecuteSetMargin	func	missing	-	auto-generated
-command.go::func::ExecuteSetMarginFill	func	missing	-	auto-generated
-command.go::func::ExecuteSetPadding	func	missing	-	auto-generated
-command.go::func::ExecuteSetPlaybackSpeed	func	missing	-	auto-generated
-command.go::func::ExecuteSetShell	func	missing	-	auto-generated
-command.go::func::ExecuteSetTheme	func	ported	src/vhs/evaluator.cr:834, spec/vhs/command_spec.cr:57, spec/vhs/evaluator_spec.cr:46	Theme resolution and Set Theme execution are covered for empty input, named themes, JSON themes, suggestion errors, invalid JSON, and unknown themes.
-command.go::func::ExecuteSetTypingSpeed	func	missing	-	auto-generated
-command.go::func::ExecuteSetWaitPattern	func	missing	-	auto-generated
-command.go::func::ExecuteSetWaitTimeout	func	missing	-	auto-generated
-command.go::func::ExecuteSetWidth	func	missing	-	auto-generated
-command.go::func::ExecuteSetWindowBar	func	missing	-	auto-generated
-command.go::func::ExecuteSetWindowBarSize	func	missing	-	auto-generated
-command.go::func::ExecuteShift	func	partial	src/vhs/evaluator.cr:712, spec/vhs/evaluator_spec.cr:150	Terminal-backed Shift execution covered by evaluator flow, but parity with upstream browser key actions is not fully demonstrated.
-command.go::func::ExecuteShow	func	missing	-	auto-generated
-command.go::func::ExecuteSleep	func	missing	-	auto-generated
-command.go::func::ExecuteType	func	missing	-	auto-generated
-command.go::func::ExecuteWait	func	partial	src/vhs/evaluator.cr:546, spec/vhs/evaluator_spec.cr:119	Default Line-scope wait behavior is covered; timeout and full upstream error parity still need broader verification.
-command.go::type::CommandFunc	type	missing	-	auto-generated
+command.go::const::WaitTick	const	intentional_divergence	src/vhs/evaluator.cr:585	Tick interval is inlined as 10.milliseconds in execute_wait; the port exposes no WaitTick constant.
+command.go::func::Execute	func	partial	src/vhs/evaluator.cr:374, spec/vhs/command_spec.cr:6, spec/vhs/evaluator_spec.cr:25	Dispatcher present and every tape spec routes through it; upstream per-command error semantics are not asserted yet.
+command.go::func::ExecuteAlt	func	partial	src/vhs/evaluator.cr:673, spec/vhs/evaluator_spec.cr:139	Alt sequences execute without error; modifier encoding is unasserted.
+command.go::func::ExecuteCopy	func	partial	src/vhs/evaluator.cr:487, spec/vhs/evaluator_spec.cr:82	Copy runs in the Copy/Paste spec; clipboard content is not asserted.
+command.go::func::ExecuteCtrl	func	partial	src/vhs/evaluator.cr:612, spec/vhs/evaluator_spec.cr:128	Ctrl sequences execute without error; modifier encoding is unasserted.
+command.go::func::ExecuteEnv	func	in_progress	src/vhs/evaluator.cr:479	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteHide	func	partial	src/vhs/evaluator.cr:457, spec/vhs/evaluator_spec.cr:69	Hide executes in the Hide/Show tape spec; timer/recording interaction is unasserted.
+command.go::func::ExecuteKey	func	partial	src/vhs/evaluator.cr:1092, spec/vhs/evaluator_spec.cr:164	Key commands run end-to-end; emitted key sequences are not asserted against upstream input handling.
+command.go::func::ExecuteLoopOffset	func	in_progress	src/vhs/evaluator.cr:959	Implementation present; upstream loop-offset semantics are unasserted.
+command.go::func::ExecuteNoop	func	ported	src/vhs/evaluator.cr:390	No-op behavior matches upstream ExecuteNoop.
+command.go::func::ExecuteOutput	func	partial	src/vhs/evaluator.cr:440, spec/vhs/evaluator_spec.cr:25	Every tape spec writes output; the extension/format matrix is unasserted.
+command.go::func::ExecutePaste	func	partial	src/vhs/evaluator.cr:494, spec/vhs/evaluator_spec.cr:82	Paste runs in the Copy/Paste spec; pasted buffer content is not asserted.
+command.go::func::ExecuteRequire	func	in_progress	src/vhs/evaluator.cr:470	Implementation present; no spec asserts include-file behavior.
+command.go::func::ExecuteScreenshot	func	partial	src/vhs/evaluator.cr:504, spec/vhs/evaluator_spec.cr:95, spec/vhs/evaluator_spec.cr:109	PNG extension validation asserted; capture assertions live in screenshot_spec.cr.
+command.go::func::ExecuteSet	func	partial	src/vhs/evaluator.cr:364, spec/vhs/command_spec.cr:48	Settings registry count asserted (21 entries); per-setting parsing is unasserted.
+command.go::func::ExecuteSetBorderRadius	func	in_progress	src/vhs/evaluator.cr:1019	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetCursorBlink	func	in_progress	src/vhs/evaluator.cr:1073	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetFontFamily	func	in_progress	src/vhs/evaluator.cr:810	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetFontSize	func	in_progress	src/vhs/evaluator.cr:798	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetFramerate	func	in_progress	src/vhs/evaluator.cr:865	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetHeight	func	in_progress	src/vhs/evaluator.cr:879	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetLetterSpacing	func	in_progress	src/vhs/evaluator.cr:893	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetLineHeight	func	in_progress	src/vhs/evaluator.cr:905	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetMargin	func	in_progress	src/vhs/evaluator.cr:981	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetMarginFill	func	in_progress	src/vhs/evaluator.cr:971	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetPadding	func	in_progress	src/vhs/evaluator.cr:931	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetPlaybackSpeed	func	in_progress	src/vhs/evaluator.cr:917	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetShell	func	in_progress	src/vhs/evaluator.cr:818	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetTheme	func	ported	src/vhs/evaluator.cr:831, spec/vhs/command_spec.cr:57, spec/vhs/evaluator_spec.cr:46	Theme resolution and Set Theme execution are covered for empty input, named themes, JSON themes, suggestion errors, invalid JSON, and unknown themes.
+command.go::func::ExecuteSetTypingSpeed	func	in_progress	src/vhs/evaluator.cr:842	Duration parsing implemented locally; parity with upstream typing-speed handling is unasserted.
+command.go::func::ExecuteSetWaitPattern	func	in_progress	src/vhs/evaluator.cr:1033	Implementation present; regex validation parity is unasserted.
+command.go::func::ExecuteSetWaitTimeout	func	in_progress	src/vhs/evaluator.cr:1046	Implementation present; units and zero-value handling are unasserted.
+command.go::func::ExecuteSetWidth	func	in_progress	src/vhs/evaluator.cr:945	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetWindowBar	func	in_progress	src/vhs/evaluator.cr:995	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetWindowBarSize	func	in_progress	src/vhs/evaluator.cr:1005	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteShift	func	partial	src/vhs/evaluator.cr:707, spec/vhs/evaluator_spec.cr:150	Terminal-backed Shift execution covered by evaluator flow, but parity with upstream browser key actions is not fully demonstrated.
+command.go::func::ExecuteShow	func	partial	src/vhs/evaluator.cr:463, spec/vhs/evaluator_spec.cr:69	Show executes in the Hide/Show tape spec; timer/recording interaction is unasserted.
+command.go::func::ExecuteSleep	func	in_progress	src/vhs/evaluator.cr:396	Duration parsing implemented; sleep duration and rounding are not asserted.
+command.go::func::ExecuteType	func	partial	src/vhs/evaluator.cr:418, spec/vhs/evaluator_spec.cr:35	Type executes inside tape specs; typing-speed interplay is unasserted.
+command.go::func::ExecuteWait	func	partial	src/vhs/evaluator.cr:542, spec/vhs/evaluator_spec.cr:119	Default Line-scope wait behavior is covered; timeout and full upstream error parity still need broader verification.
+command.go::type::CommandFunc	type	ported	src/vhs/evaluator.cr:289, src/vhs/evaluator.cr:292	Alias Proc(Parser::Command, VHS, Exception?) backing command_funcs/settings; registry key set asserted in command_spec.cr.
 command_test.go::test::TestCommand	test	ported	spec/vhs/command_spec.cr:5, spec/vhs/evaluator_spec.cr:119, spec/vhs/evaluator_spec.cr:150	Crystal now matches the upstream command function count and key set, and also has direct evaluator coverage for Wait and Shift execution.
 command_test.go::test::TestExecuteSetTheme	test	ported	spec/vhs/command_spec.cr:57, spec/vhs/evaluator_spec.cr:46	Crystal covers the same theme-resolution scenarios as upstream command_test, plus evaluator-level Set Theme command behavior.
 draw.go::func::MakeBorderRadiusMask	func	missing	-	auto-generated
