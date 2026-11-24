@@ -39,6 +39,10 @@ are*, not *how the repo works*.
     (toolchain `v0.3.4` is installed) but discovers 378 Go items instead of 248
     because it reports native kinds (`function`, `class`, `interface`). Treat a
     parser switch as a reviewed ID migration, not a config change.
+  - The generated layer (`go_source_parity.tsv`, `go_test_parity.tsv`) was
+    rebuilt with the canonical scripts: it now carries the `# kinds=` header and
+    a `.metadata.json` sibling, and its statuses are always `missing`/`baseline`.
+    Curated state lives **only** in `go_port_inventory.tsv`.
   - This checkout is on an exFAT volume: macOS writes AppleDouble `._*`
     sidecars next to every file. They break spec discovery and make git print
     `non-monotonic index .../._pack-*.idx`. Run `make sidecars` (every gate
@@ -48,10 +52,12 @@ are*, not *how the repo works*.
     maintained `dsisnero/terminfo` fork.
   - `Metrics/CyclomaticComplexity` is excluded for `src/vhs/evaluator.cr` only,
     because the dispatch mirrors upstream's Go switches case for case.
-- **Last commit:** `31cb4d2` Promote record and screenshot tests in parity
-  manifests
+- **Last commit:** `2a8ea48` Make project scaffolding resumable and forward
+  parity gates to the installed skill
 - **Gates:** `make lint` pass; `make test` `90 examples, 0 failures`;
-  `make inventory` pass (231 port items, 231 API items, 17 tests).
+  `make inventory` pass (231 port items, 231 API items, 17 tests, strict refs);
+  `verify_parity_adversarial.sh ... 'make test' 'go test ./...'` pass;
+  `check_kind_vocabulary.py --scan go=vendor/vhs` no drops.
 
 Keep this block accurate after every feature: the next session reads it first
 (see `AGENTS.md` → **How to resume**).
