@@ -10,26 +10,42 @@ are*, not *how the repo works*.
 
 - **Current focus:** finish reconciling the curated ledger with the code already
   in `src/`. `command.go` is done (39 of its 41 symbols map 1:1 to
-  `Vhs::Evaluator.execute_*`); the remaining large blocks are `style.go` (21),
-  `token/token.go` (85), `parser/parser.go` (12), `vhs.go` (13), and
-  `draw.go` (11).
+  `Vhs::Evaluator.execute_*`). Start with `style.go`, where all 21 rows already
+  have a home in `src/`, then take the two small blocks (`error.go`,
+  `evaluator.go`) that are genuine implementation gaps rather than ledger debt.
 - **Next up:**
-  1. Reconcile `style.go` (21 rows) against the color and lipgloss-style
-     constants in `src/vhs/evaluator.cr`.
-  2. Reconcile `token/token.go` (85), `parser/parser.go` (12), `lexer/lexer.go`
-     (3), `vhs.go` (13), `draw.go` (11), `themes.go` (4), `screenshot.go` (3),
-     `record.go`, and `shell.go` rows.
-  3. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
-     in `go_test_parity.tsv` (`lexer/lexer_test.go`, `parser/parser_test.go`,
-     `token/token_test.go`).
-  4. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
+  1. Reconcile `style.go` (21 rows) — ledger-only, everything exists: the 19
+     color constants map to `src/vhs/evaluator.cr:9-27`
+     (`BACKGROUND`…`INDIGO`, same hex/lipgloss values), `StyleOptions` →
+     `Vhs::StyleOptions` (`evaluator.cr:1259`), `DefaultStyleOptions` →
+     `Vhs.default_style_options` (`evaluator.cr:1520`).
+  2. Reconcile `error.go` (5 rows) — partially implemented, so this is porting,
+     not just bookkeeping: `InvalidSyntaxError` exists (`evaluator.cr:183`) but
+     `ErrorColumnOffset`, `Underline`, `LineNumber`, and upstream's
+     `printError`/`printErrors` layout (line number gutter, caret underline,
+     `ErrorStyle`) have no Crystal counterpart yet. Check what
+     `Vhs#evaluate` currently prints for parser errors before promoting rows.
+  3. Reconcile `evaluator.go` (2 rows): `Evaluate` → `Vhs#evaluate(tape,
+     output)` (`evaluator.cr:1993`), but the signature drops upstream's
+     `context.Context` and `...EvaluatorOption`; `EvaluatorOption` itself is
+     absent. Record the divergence or port the option type.
+  4. Reconcile the remaining source rows: `token/token.go` (85),
+     `parser/parser.go` (12), `lexer/lexer.go` (3), `vhs.go` (13), `draw.go`
+     (11), `themes.go` (4), `screenshot.go` (3), `record.go` (1),
+     `shell.go` (1).
+  5. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
+     in `go_test_parity.tsv` (`lexer/lexer_test.go` ×2, `parser/parser_test.go`
+     ×6, `token/token_test.go` ×1).
+  6. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
      `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
      spec coverage.
-  5. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
+  7. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
      `syntax.go`, `testing.go`, `man.go`.
 - **Status by area:**
   - Lexer / token / parser: implemented in `src/vhs/{lexer,token,parser}.cr`
-    with specs; ledger rows still `missing` (100 rows).
+    with specs; ledger rows still `missing` (100 source rows + 9 test IDs).
+  - Errors / evaluate entrypoint: `InvalidSyntaxError` ported; the
+    `error.go` display helpers and `EvaluatorOption` are not.
   - Command dispatch / evaluator: all 41 `command.go` rows reconciled — 3
     `ported`, 14 `partial`, 23 `in_progress`, 1 `intentional_divergence`. Only
     Set Theme has upstream-asserted behavior; the rest record implementation
@@ -64,12 +80,16 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `43865e8` Rebuild the generated parity layer with the
-  canonical skill scripts (this block covers the `command.go` reconcile that
-  follows it).
-- **Gates:** `make lint` pass; `make test` `90 examples, 0 failures`;
-  `make inventory` pass (strict refs; 248 ledger rows: 11 `ported`, 14
-  `partial`, 23 `in_progress`, 199 `missing`, 1
+- **Last commit:** `dc4a050` port: reconcile command.go ledger rows against
+  evaluator.cr (working tree clean at that commit).
+- **Ledger `missing` rows left (199), by file:** `token/token.go` 85,
+  `style.go` 21, `ffmpeg.go` 16, `vhs.go` 13, `parser/parser.go` 12,
+  `draw.go` 11, `video.go` 6, `error.go` 5, `testing.go` 5, `themes.go` 4,
+  `lexer/lexer.go` 3, `screenshot.go` 3, `evaluator.go` 2, `record.go` 1,
+  `shell.go` 1, `publish.go` 1, `syntax.go` 1, plus the 9 test IDs.
+- **Gates:** `make lint` pass (21 files); `make test` `90 examples, 0 failures`;
+  `make inventory` pass (strict refs; 231 items tracked, 248 ledger rows: 11
+  `ported`, 14 `partial`, 23 `in_progress`, 199 `missing`, 1
   `intentional_divergence`); `verify_parity_adversarial.sh . vendor/vhs go
   'make test' 'go test ./...'` pass; `check_kind_vocabulary.py --scan
   go=vendor/vhs` no drops.
@@ -81,6 +101,9 @@ Keep this block accurate after every feature: the next session reads it first
 
 - [x] Reconcile `command.go` rows (41) against `src/vhs/evaluator.cr`
 - [ ] Reconcile `style.go` constants (21) against `src/vhs/evaluator.cr`
+- [ ] Reconcile `error.go` (5) — port `LineNumber`, `Underline`,
+      `ErrorColumnOffset`, error printing
+- [ ] Reconcile `evaluator.go` (2) — `Evaluate` signature, `EvaluatorOption`
 - [ ] Reconcile `token/token.go` (85), `parser/parser.go` (12),
       `lexer/lexer.go` (3) rows
 - [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
