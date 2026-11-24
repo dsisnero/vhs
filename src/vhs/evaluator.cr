@@ -397,7 +397,6 @@ module Vhs
     # Parse duration (simple implementation for now)
     # Supports formats: "1s", "500ms", "0.5s"
     duration_str = cmd.args
-    seconds = 0.0
 
     if duration_str.ends_with?("ms")
       ms = duration_str[0...-2].to_f? || 0.0
@@ -544,7 +543,6 @@ module Vhs
     timeout = v.options.wait_timeout
     if !cmd.options.empty?
       duration_str = cmd.options
-      seconds = 0.0
       if duration_str.ends_with?("ms")
         ms = duration_str[0...-2].to_f? || 0.0
         seconds = ms / 1000.0
@@ -788,8 +786,8 @@ module Vhs
     end
 
     # Execute commands in current VHS instance
-    cmds.each do |cmd|
-      err = execute(cmd, v)
+    cmds.each do |sub_cmd|
+      err = execute(sub_cmd, v)
       return err if err
     end
 
@@ -843,7 +841,6 @@ module Vhs
   # ExecuteSetTypingSpeed applies the default typing speed on the vhs.
   def self.execute_set_typing_speed(cmd : Parser::Command, v : VHS) : Exception?
     duration_str = cmd.args
-    seconds = 0.0
 
     if duration_str.ends_with?("ms")
       ms = duration_str[0...-2].to_f? || 0.0
@@ -1048,7 +1045,6 @@ module Vhs
   # ExecuteSetWaitTimeout applies the wait timeout on the vhs.
   def self.execute_set_wait_timeout(cmd : Parser::Command, v : VHS) : Exception?
     duration_str = cmd.args
-    seconds = 0.0
 
     if duration_str.ends_with?("ms")
       ms = duration_str[0...-2].to_f? || 0.0
@@ -1325,7 +1321,7 @@ module Vhs
 
   # ScreenshotOptions holds options for taking screenshots.
   struct ScreenshotOptions
-    property frame_capture : Bool
+    property? frame_capture : Bool
     property next_screenshot_path : String
     property screenshots : Hash(String, Int32)
     property input : String
@@ -1712,18 +1708,16 @@ module Vhs
       @reader_fiber = spawn do
         output = Bytes.new(4096)
         loop do
-          begin
-            bytes_read = @process.output.read(output)
-            break if bytes_read == 0 # EOF
+          bytes_read = @process.output.read(output)
+          break if bytes_read == 0 # EOF
 
-            chunk = String.new(output[0, bytes_read])
-            @output_buffer << chunk
-            # Also update buffer with simple handling
-            update_buffer(chunk)
-          rescue IO::Error
-            # Process likely ended
-            break
-          end
+          chunk = String.new(output[0, bytes_read])
+          @output_buffer << chunk
+          # Also update buffer with simple handling
+          update_buffer(chunk)
+        rescue IO::Error
+          # Process likely ended
+          break
         end
       end
     end

@@ -95,6 +95,20 @@ make lint
 
 Run `make help` for all available targets.
 
+## Documentation
+
+| File | Purpose |
+| --- | --- |
+| [Resuming work](docs/resuming.md) | Start here in a new session: plan, gates, and checkout quirks |
+| [Architecture](docs/architecture.md) | Runtime layout, upstream boundaries, and rendering pipeline |
+| [Development](docs/development.md) | Local setup, upstream pin, parity tooling, and checkout quirks |
+| [Coding Guidelines](docs/coding-guidelines.md) | Crystal style, parity expectations, and file rules |
+| [Testing](docs/testing.md) | Spec organization, gates, and parity validation |
+| [PR Workflow](docs/pr-workflow.md) | Beads workflow, branch hygiene, and landing requirements |
+
+Current port status and the ordered backlog live in
+[`plans/parity.md`](plans/parity.md).
+
 ## Contributing
 
 1. Fork it (<https://github.com/dsisnero/vhs/fork>)

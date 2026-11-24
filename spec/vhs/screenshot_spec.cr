@@ -17,7 +17,7 @@ module Vhs
         frame.should eq(target_frame)
 
         # Check frame capture disabled
-        opts.frame_capture.should be_false
+        opts.frame_capture?.should be_false
       end
     end
 
@@ -28,7 +28,7 @@ module Vhs
 
         opts.enable_frame_capture(path)
 
-        opts.frame_capture.should be_true
+        opts.frame_capture?.should be_true
         opts.next_screenshot_path.should eq(path)
       end
     end

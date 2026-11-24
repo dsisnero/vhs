@@ -64,10 +64,6 @@ shards:
     git: https://github.com/dsisnero/term2.git
     version: 0.5.0+git.commit.bafdc6a162032abe577ce2f37a36907f0e016add
 
-  terminfo:
-    git: https://github.com/docelic/terminfo.git
-    version: 0.8.1
-
   textseg:
     git: https://github.com/naqvis/uni_text_seg.git
     version: 0.1.3

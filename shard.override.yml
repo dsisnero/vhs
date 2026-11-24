@@ -1,0 +1,9 @@
+# Dependency source overrides applied on top of shard.yml + shard.lock.
+#
+# ultraviolet (pinned in shard.lock) still declares `docelic/terminfo`, which was
+# removed from GitHub. The maintained fork carries the same library, so point the
+# transitive dependency at it instead of bumping ultraviolet for this one rename.
+dependencies:
+  terminfo:
+    github: dsisnero/terminfo
+    branch: master

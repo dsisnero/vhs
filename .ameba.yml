@@ -8,3 +8,11 @@ Excluded:
 Lint/SpecEqWithBoolOrNilLiteral:
   Excluded:
     - spec/**/*
+
+# The evaluator's command dispatch mirrors the upstream Go switch statements in
+# vendor/vhs/command.go one-to-one. Splitting those cases into smaller methods
+# would hide divergence from upstream, so the port keeps them intact and opts
+# this file out of the complexity ceiling.
+Metrics/CyclomaticComplexity:
+  Excluded:
+    - src/vhs/evaluator.cr

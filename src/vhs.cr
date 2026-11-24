@@ -43,10 +43,10 @@ module Vhs::CLI
         puts parser
         exit 0
       end
-      parser.unknown_args do |args|
-        STDERR.puts "DEBUG: unknown_args called with #{args}"
-        if args.size > 0
-          input_file = args[0]
+      parser.unknown_args do |unknown|
+        STDERR.puts "DEBUG: unknown_args called with #{unknown}"
+        if unknown.size > 0
+          input_file = unknown[0]
           STDERR.puts "DEBUG: input_file #{input_file}"
           if input_file == "-"
             # Read from stdin

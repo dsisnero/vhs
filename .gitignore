@@ -6,3 +6,7 @@
 /.beads/
 .claude/
 /temp/
+
+# macOS AppleDouble sidecars on this exFAT checkout
+._*
+.DS_Store
