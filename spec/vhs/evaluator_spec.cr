@@ -250,5 +250,66 @@ module Vhs
         end
       end
     end
+
+    describe "EvaluatorOption" do
+      it "runs after the tape's commands have been executed" do
+        tape = <<-TAPE
+        Set Theme "Catppuccin Latte"
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        seen_theme = ""
+        option = ->(v : VHS) do
+          seen_theme = v.options.theme.name
+          nil
+        end
+
+        errors = Vhs.evaluate(tape, IO::Memory.new, option)
+
+        errors.should be_empty
+        seen_theme.should eq("Catppuccin Latte")
+      end
+
+      it "can redirect the output paths before rendering" do
+        tape = <<-TAPE
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        captured = ""
+        redirect = ->(v : VHS) do
+          v.options.video.output.gif = "redirected.gif"
+          nil
+        end
+        capture = ->(v : VHS) do
+          captured = v.options.video.output.gif
+          nil
+        end
+
+        Vhs.evaluate(tape, IO::Memory.new, redirect, capture).should be_empty
+        captured.should eq("redirected.gif")
+      end
+
+      it "applies multiple options in order" do
+        tape = <<-TAPE
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        calls = [] of String
+        first = ->(_v : VHS) do
+          calls << "first"
+          nil
+        end
+        second = ->(_v : VHS) do
+          calls << "second"
+          nil
+        end
+
+        Vhs.evaluate(tape, IO::Memory.new, first, second).should be_empty
+        calls.should eq(["first", "second"])
+      end
+    end
   end
 end

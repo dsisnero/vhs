@@ -1580,9 +1580,28 @@ module Vhs
     n * 2
   end
 
+  # EvaluatorOption is a function that can be used to modify the VHS instance
+  # before it renders.
+  alias EvaluatorOption = VHS -> Nil
+
   # Evaluate takes as input a tape string, an output writer, and an output file
   # and evaluates all the commands within the tape string and produces a GIF.
+  #
+  # Options are applied after every command has run and recording has stopped,
+  # which is where upstream applies them: an option can read the tape's final
+  # settings and override the output paths before rendering.
+  #
+  # Two overloads are needed because a typed splat parameter in Crystal requires
+  # at least one argument, so the no-option call needs its own signature.
   def self.evaluate(tape : String, output : IO = STDOUT) : Array(Exception)
+    evaluate_tape(tape, output, [] of EvaluatorOption)
+  end
+
+  def self.evaluate(tape : String, output : IO, *opts : EvaluatorOption) : Array(Exception)
+    evaluate_tape(tape, output, opts.to_a)
+  end
+
+  private def self.evaluate_tape(tape : String, output : IO, opts : Array(EvaluatorOption)) : Array(Exception)
     l = Lexer.new(tape)
     p = Parser.new(l)
 
@@ -1620,6 +1639,11 @@ module Vhs
     # Stop VHS
     v.stop
     sleep 0.05.seconds
+
+    # Upstream applies the evaluator options here, after all settings and
+    # commands have run and recording has been torn down, so an option sees the
+    # tape's final options and can still redirect the outputs.
+    opts.each(&.call(v))
 
     # TODO: Render output
     v.errors
@@ -1972,74 +1996,5 @@ module Vhs
 
       nil
     end
-  end
-
-  # Evaluate takes as input a tape string, an output writer, and evaluates all
-  # the commands within the tape string to produce video outputs.
-  #
-  # Returns an array of errors encountered during evaluation.
-  def evaluate(tape : String, output : IO = STDOUT) : Array(Exception)
-    # Parse the tape
-    lexer = Lexer.new(tape)
-    parser = Parser.new(lexer)
-    commands = parser.parse
-    errors = parser.errors
-
-    if !errors.empty? || commands.empty?
-      return errors.map { |err| Exception.new(err) }
-    end
-
-    # Create VHS instance
-    v = VHS.new
-
-    # Execute SET and ENV commands first (as in Go)
-    commands.each do |cmd|
-      if (cmd.type == Token::Type::SET && cmd.options == "Shell") || cmd.type == Token::Type::ENV
-        if err = VHS.execute(cmd, v)
-          return [err]
-        end
-      end
-    end
-
-    # Start recording
-    v.start
-    return v.errors unless v.errors.empty?
-
-    # Find offset where non-SET/OUTPUT/REQUIRE commands begin
-    offset = 0
-    commands.each_with_index do |cmd, i|
-      if cmd.type == Token::Type::SET || cmd.type == Token::Type::OUTPUT || cmd.type == Token::Type::REQUIRE
-        # Highlight and execute (except Shell)
-        # output.puts highlight(cmd, false) if output.tty?  # TODO: implement highlight
-        if cmd.options != "Shell"
-          if err = VHS.execute(cmd, v)
-            return [err]
-          end
-        end
-      else
-        offset = i
-        break
-      end
-    end
-
-    # TODO: Validate dimensions
-
-    # Execute remaining commands
-    commands[offset..].each do |cmd|
-      if err = VHS.execute(cmd, v)
-        v.stop
-        return [err]
-      end
-    end
-
-    # Stop recording
-    v.stop
-
-    # Render video
-    if err = v.render
-      return [err]
-    end
-
-    v.errors
   end
 end

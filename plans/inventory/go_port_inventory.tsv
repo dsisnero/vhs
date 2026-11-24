@@ -59,8 +59,8 @@ error.go::func::LineNumber	func	ported	src/vhs/error.cr:34, spec/vhs/error_spec.
 error.go::func::Underline	func	ported	src/vhs/error.cr:29, spec/vhs/error_spec.cr:30	Repeats '^' n times in ERROR_STYLE; count, zero-length case, and ANSI wrapping asserted.
 error.go::method::InvalidSyntaxError.Error	method	ported	src/vhs/error.cr:10, spec/vhs/error_spec.cr:12	Crystal spells the Error() method message; returns 'parser: N error(s)' and is asserted for two parser errors.
 error.go::struct::InvalidSyntaxError	struct	ported	src/vhs/error.cr:3, spec/vhs/error_spec.cr:12	Holds []parser.Error as errors; print_errors expands it into per-error gutters plus the summary line. Moved out of evaluator.cr to mirror upstream error.go.
-evaluator.go::func::Evaluate	func	missing	-	auto-generated
-evaluator.go::type::EvaluatorOption	type	missing	-	auto-generated
+evaluator.go::func::Evaluate	func	partial	src/vhs/evaluator.cr:1596, src/vhs/evaluator.cr:1604, spec/vhs/evaluator_spec.cr:254	Vhs.evaluate follows upstream's flow (parse -> SET/ENV -> start -> remaining -> stop -> options); gaps: no context.Context (nothing to cancel in Crystal), the SET/OUTPUT/REQUIRE highlight print to `out` is still a TODO, dimension validation is absent, and the render call is not wired (upstream calls v.Render() before returning).
+evaluator.go::type::EvaluatorOption	type	ported	src/vhs/evaluator.cr:1585, src/vhs/evaluator.cr:1646, spec/vhs/evaluator_spec.cr:254	Alias VHS -> Nil applied after stop, which is upstream's position; specs prove an option runs after the tape's SET commands, can redirect output paths, and that multiple options apply in order.
 ffmpeg.go::func::NewScreenshotFilterComplexBuilder	func	missing	-	auto-generated
 ffmpeg.go::func::NewStreamBuilder	func	missing	-	auto-generated
 ffmpeg.go::func::NewVideoFilterBuilder	func	missing	-	auto-generated

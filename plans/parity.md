@@ -9,32 +9,32 @@ are*, not *how the repo works*.
 ## Where we are
 
 - **Current focus:** finish reconciling the curated ledger with the code already
-  in `src/`. `command.go` (39 of 41 rows), `style.go` (21 of 21) and `error.go`
-  (5 of 5) are done. Next is `evaluator.go`, the last small block: `Evaluate`
-  maps to `Vhs.evaluate` but the signature drops upstream's `context.Context`
-  and `...EvaluatorOption`, and a dead duplicate `VHS#evaluate` still exists.
+  in `src/`. All four small blocks are done: `command.go` (39 of 41 rows),
+  `style.go` (21 of 21), `error.go` (5 of 5) and `evaluator.go` (2 of 2).
+  Next is the bulk reconciliation pass: `token/token.go` (85) is the largest
+  remaining block, and the lexer/parser spans are mostly written but unledgered.
 - **Next up:**
-  1. Reconcile `evaluator.go` (2 rows): `Evaluate` → `Vhs.evaluate(tape,
-     output)` (`evaluator.cr:1585`), but the signature drops upstream's
-     `context.Context` and `...EvaluatorOption`; `EvaluatorOption` itself is
-     absent. Record the divergence or port the option type, and remove or fold
-     the unused instance-level `VHS#evaluate` at `evaluator.cr:1981`, which
-     duplicates the module function with different error handling.
-  2. Reconcile the remaining source rows: `token/token.go` (85),
+  1. Reconcile the remaining source rows: `token/token.go` (85),
      `parser/parser.go` (12), `lexer/lexer.go` (3), `vhs.go` (13), `draw.go`
      (11), `video.go` (6), `themes.go` (4), `screenshot.go` (3), `record.go`
      (1), `shell.go` (1).
-  3. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
+  2. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
      in `go_test_parity.tsv` (`lexer/lexer_test.go` ×2, `parser/parser_test.go`
      ×6, `token/token_test.go` ×1).
-  4. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
+  3. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
      `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
      spec coverage.
-  5. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
+  4. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
      `syntax.go`, `testing.go`, `man.go`.
 - **Status by area:**
   - Lexer / token / parser: implemented in `src/vhs/{lexer,token,parser}.cr`
     with specs; ledger rows still `missing` (100 source rows + 9 test IDs).
+  - Evaluate entrypoint: `EvaluatorOption` is `ported` (alias applied after
+    stop, asserted by three specs); `Evaluate` itself is `partial` because the
+    SET/OUTPUT/REQUIRE highlight print, dimension validation, and the render
+    call are still missing. The unreachable duplicate `VHS#evaluate` (it
+    re-implemented the same flow with different error handling and was the only
+    caller of `VHS#render`) was deleted.
   - Errors / evaluate entrypoint: all 5 `error.go` rows `ported` in
     `src/vhs/error.cr` (moved out of `evaluator.cr` to mirror upstream's file
     layout): `InvalidSyntaxError`, `ERROR_COLUMN_OFFSET`, `underline`,
@@ -90,14 +90,14 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `ebae402` port: port error.go display helpers into
   src/vhs/error.cr (working tree clean at that commit).
-- **Ledger `missing` rows left (173), by file:** `token/token.go` 85,
+- **Ledger `missing` rows left (171), by file:** `token/token.go` 85,
   `ffmpeg.go` 16, `vhs.go` 13, `parser/parser.go` 12, `draw.go` 11, `video.go`
   6, `testing.go` 5, `themes.go` 4, `lexer/lexer.go` 3, `screenshot.go` 3,
-  `evaluator.go` 2, `record.go` 1, `shell.go` 1, `publish.go` 1,
-  `syntax.go` 1, plus the 9 test IDs.
-- **Gates:** `make lint` pass (24 files); `make test` `107 examples, 0
+  `record.go` 1, `shell.go` 1, `publish.go` 1, `syntax.go` 1, plus the 9 test
+  IDs.
+- **Gates:** `make lint` pass (24 files); `make test` `110 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 36 `ported`, 15 `partial`, 23 `in_progress`, 173 `missing`, 1
+  rows: 37 `ported`, 16 `partial`, 23 `in_progress`, 171 `missing`, 1
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -112,7 +112,8 @@ Keep this block accurate after every feature: the next session reads it first
       them with `spec/vhs/style_spec.cr`
 - [x] Reconcile `error.go` (5) — port `LineNumber`, `Underline`,
       `ErrorColumnOffset`, `print_error`/`print_errors`, and wire the CLI to it
-- [ ] Reconcile `evaluator.go` (2) — `Evaluate` signature, `EvaluatorOption`
+- [x] Reconcile `evaluator.go` (2) — port `EvaluatorOption`, accept options in
+      `Vhs.evaluate`, drop the dead duplicate `VHS#evaluate`
 - [ ] Reconcile `token/token.go` (85), `parser/parser.go` (12),
       `lexer/lexer.go` (3) rows
 - [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
@@ -155,6 +156,11 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Vhs.evaluate` needs two overloads (`evaluate(tape, output)` and
+  `evaluate(tape, output, *opts : EvaluatorOption)`) because a Crystal typed
+  splat parameter requires at least one argument; upstream's variadic call shape
+  is otherwise preserved. `context.Context` has no Crystal counterpart and is
+  omitted.
 - `Vhs.print_error` guards the tape line lookup (`lines[line - 1]?`) where
   upstream panics on an out-of-range line number; the printed gutter is
   identical for valid lines.
