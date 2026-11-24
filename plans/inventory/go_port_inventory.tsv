@@ -143,92 +143,92 @@ themes.go::struct::Theme	struct	missing	-	auto-generated
 themes.go::struct::ThemeNotFoundError	struct	missing	-	auto-generated
 themes_test.go::test::TestFindAllThemes	test	ported	spec/vhs/themes_spec.cr:5	Crystal verifies that sorted_theme_names loads the full upstream theme set and matches the expected count.
 themes_test.go::test::TestFindTheme	test	ported	spec/vhs/themes_spec.cr:13, spec/vhs/command_spec.cr:57	Crystal covers exact-match, suggestion, no-match, single-character, empty-string, JSON, invalid JSON, and unknown-theme resolution paths.
-token/token.go::const::ALT	const	missing	-	auto-generated
-token/token.go::const::AT	const	missing	-	auto-generated
-token/token.go::const::BACKSLASH	const	missing	-	auto-generated
-token/token.go::const::BACKSPACE	const	missing	-	auto-generated
-token/token.go::const::BOOLEAN	const	missing	-	auto-generated
-token/token.go::const::BORDER_RADIUS	const	missing	-	auto-generated
-token/token.go::const::CARET	const	missing	-	auto-generated
-token/token.go::const::COMMENT	const	missing	-	auto-generated
-token/token.go::const::COPY	const	missing	-	auto-generated
-token/token.go::const::CTRL	const	missing	-	auto-generated
-token/token.go::const::CURSOR_BLINK	const	missing	-	auto-generated
-token/token.go::const::DASH	const	missing	-	auto-generated
-token/token.go::const::DELETE	const	missing	-	auto-generated
-token/token.go::const::DOT	const	missing	-	auto-generated
-token/token.go::const::DOWN	const	missing	-	auto-generated
-token/token.go::const::EM	const	missing	-	auto-generated
-token/token.go::const::END	const	missing	-	auto-generated
-token/token.go::const::ENTER	const	missing	-	auto-generated
-token/token.go::const::ENV	const	missing	-	auto-generated
-token/token.go::const::EOF	const	missing	-	auto-generated
-token/token.go::const::EQUAL	const	missing	-	auto-generated
-token/token.go::const::ESCAPE	const	missing	-	auto-generated
-token/token.go::const::FONT_FAMILY	const	missing	-	auto-generated
-token/token.go::const::FONT_SIZE	const	missing	-	auto-generated
-token/token.go::const::FRAMERATE	const	missing	-	auto-generated
-token/token.go::const::HEIGHT	const	missing	-	auto-generated
-token/token.go::const::HIDE	const	missing	-	auto-generated
-token/token.go::const::HOME	const	missing	-	auto-generated
-token/token.go::const::ILLEGAL	const	missing	-	auto-generated
-token/token.go::const::INSERT	const	missing	-	auto-generated
-token/token.go::const::JSON	const	missing	-	auto-generated
-token/token.go::const::LEFT	const	missing	-	auto-generated
-token/token.go::const::LEFT_BRACKET	const	missing	-	auto-generated
-token/token.go::const::LETTER_SPACING	const	missing	-	auto-generated
-token/token.go::const::LINE_HEIGHT	const	missing	-	auto-generated
-token/token.go::const::LOOP_OFFSET	const	missing	-	auto-generated
-token/token.go::const::MARGIN	const	missing	-	auto-generated
-token/token.go::const::MARGIN_FILL	const	missing	-	auto-generated
-token/token.go::const::MILLISECONDS	const	missing	-	auto-generated
-token/token.go::const::MINUS	const	missing	-	auto-generated
-token/token.go::const::MINUTES	const	missing	-	auto-generated
-token/token.go::const::NUMBER	const	missing	-	auto-generated
-token/token.go::const::OUTPUT	const	missing	-	auto-generated
-token/token.go::const::PADDING	const	missing	-	auto-generated
-token/token.go::const::PAGE_DOWN	const	missing	-	auto-generated
-token/token.go::const::PAGE_UP	const	missing	-	auto-generated
-token/token.go::const::PASTE	const	missing	-	auto-generated
-token/token.go::const::PERCENT	const	missing	-	auto-generated
-token/token.go::const::PLAYBACK_SPEED	const	missing	-	auto-generated
-token/token.go::const::PLUS	const	missing	-	auto-generated
-token/token.go::const::PX	const	missing	-	auto-generated
-token/token.go::const::REGEX	const	missing	-	auto-generated
-token/token.go::const::REQUIRE	const	missing	-	auto-generated
-token/token.go::const::RIGHT	const	missing	-	auto-generated
-token/token.go::const::RIGHT_BRACKET	const	missing	-	auto-generated
-token/token.go::const::SCREENSHOT	const	missing	-	auto-generated
-token/token.go::const::SECONDS	const	missing	-	auto-generated
-token/token.go::const::SET	const	missing	-	auto-generated
-token/token.go::const::SHELL	const	missing	-	auto-generated
-token/token.go::const::SHIFT	const	missing	-	auto-generated
-token/token.go::const::SHOW	const	missing	-	auto-generated
-token/token.go::const::SLASH	const	missing	-	auto-generated
-token/token.go::const::SLEEP	const	missing	-	auto-generated
-token/token.go::const::SOURCE	const	missing	-	auto-generated
-token/token.go::const::SPACE	const	missing	-	auto-generated
-token/token.go::const::STRING	const	missing	-	auto-generated
-token/token.go::const::TAB	const	missing	-	auto-generated
-token/token.go::const::THEME	const	missing	-	auto-generated
-token/token.go::const::TYPE	const	missing	-	auto-generated
-token/token.go::const::TYPING_SPEED	const	missing	-	auto-generated
-token/token.go::const::UP	const	missing	-	auto-generated
-token/token.go::const::WAIT	const	missing	-	auto-generated
-token/token.go::const::WAIT_PATTERN	const	missing	-	auto-generated
-token/token.go::const::WAIT_TIMEOUT	const	missing	-	auto-generated
-token/token.go::const::WIDTH	const	missing	-	auto-generated
-token/token.go::const::WINDOW_BAR	const	missing	-	auto-generated
-token/token.go::const::WINDOW_BAR_SIZE	const	missing	-	auto-generated
-token/token.go::func::IsCommand	func	missing	-	auto-generated
-token/token.go::func::IsModifier	func	missing	-	auto-generated
-token/token.go::func::IsSetting	func	missing	-	auto-generated
-token/token.go::func::LookupIdentifier	func	missing	-	auto-generated
-token/token.go::func::ToCamel	func	missing	-	auto-generated
-token/token.go::method::Type.String	method	missing	-	auto-generated
-token/token.go::struct::Token	struct	missing	-	auto-generated
-token/token.go::type::Type	type	missing	-	auto-generated
-token/token_test.go::test::TestToCamel	test	missing	-	auto-generated
+token/token.go::const::ALT	const	ported	src/vhs/token.cr:33, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::AT	const	ported	src/vhs/token.cr:8, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::BACKSLASH	const	ported	src/vhs/token.cr:13, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::BACKSPACE	const	ported	src/vhs/token.cr:34, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::BOOLEAN	const	ported	src/vhs/token.cr:55, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::BORDER_RADIUS	const	ported	src/vhs/token.cr:94, spec/vhs/token_spec.cr:153	Upstream value is the string CORNER_RADIUS, which is also the Crystal symbol; asserted by the full 77-constant table.
+token/token.go::const::CARET	const	ported	src/vhs/token.cr:19, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::COMMENT	const	ported	src/vhs/token.cr:50, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::COPY	const	ported	src/vhs/token.cr:72, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::CTRL	const	ported	src/vhs/token.cr:35, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::CURSOR_BLINK	const	ported	src/vhs/token.cr:98, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::DASH	const	ported	src/vhs/token.cr:15, spec/vhs/token_spec.cr:153	Upstream declares both DASH and MINUS as "-"; the port keeps both constants.
+token/token.go::const::DELETE	const	ported	src/vhs/token.cr:36, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::DOT	const	ported	src/vhs/token.cr:14, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::DOWN	const	ported	src/vhs/token.cr:58, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::EM	const	ported	src/vhs/token.cr:22, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::END	const	ported	src/vhs/token.cr:37, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::ENTER	const	ported	src/vhs/token.cr:38, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::ENV	const	ported	src/vhs/token.cr:75, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::EOF	const	ported	src/vhs/token.cr:29, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::EQUAL	const	ported	src/vhs/token.cr:9, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::ESCAPE	const	ported	src/vhs/token.cr:39, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::FONT_FAMILY	const	ported	src/vhs/token.cr:78, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::FONT_SIZE	const	ported	src/vhs/token.cr:79, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::FRAMERATE	const	ported	src/vhs/token.cr:80, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::HEIGHT	const	ported	src/vhs/token.cr:82, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::HIDE	const	ported	src/vhs/token.cr:64, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::HOME	const	ported	src/vhs/token.cr:40, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::ILLEGAL	const	ported	src/vhs/token.cr:30, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::INSERT	const	ported	src/vhs/token.cr:41, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::JSON	const	ported	src/vhs/token.cr:53, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::LEFT	const	ported	src/vhs/token.cr:59, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::LEFT_BRACKET	const	ported	src/vhs/token.cr:18, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::LETTER_SPACING	const	ported	src/vhs/token.cr:84, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::LINE_HEIGHT	const	ported	src/vhs/token.cr:85, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::LOOP_OFFSET	const	ported	src/vhs/token.cr:89, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::MARGIN	const	ported	src/vhs/token.cr:91, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::MARGIN_FILL	const	ported	src/vhs/token.cr:90, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::MILLISECONDS	const	ported	src/vhs/token.cr:23, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::MINUS	const	ported	src/vhs/token.cr:16, spec/vhs/token_spec.cr:153	Upstream declares both DASH and MINUS as "-"; the port keeps both constants.
+token/token.go::const::MINUTES	const	ported	src/vhs/token.cr:24, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::NUMBER	const	ported	src/vhs/token.cr:51, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::OUTPUT	const	ported	src/vhs/token.cr:65, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PADDING	const	ported	src/vhs/token.cr:87, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PAGE_DOWN	const	ported	src/vhs/token.cr:42, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PAGE_UP	const	ported	src/vhs/token.cr:43, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PASTE	const	ported	src/vhs/token.cr:73, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PERCENT	const	ported	src/vhs/token.cr:11, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PLAYBACK_SPEED	const	ported	src/vhs/token.cr:81, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PLUS	const	ported	src/vhs/token.cr:10, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::PX	const	ported	src/vhs/token.cr:25, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::REGEX	const	ported	src/vhs/token.cr:54, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::REQUIRE	const	ported	src/vhs/token.cr:66, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::RIGHT	const	ported	src/vhs/token.cr:60, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::RIGHT_BRACKET	const	ported	src/vhs/token.cr:17, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SCREENSHOT	const	ported	src/vhs/token.cr:71, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SECONDS	const	ported	src/vhs/token.cr:26, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SET	const	ported	src/vhs/token.cr:67, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SHELL	const	ported	src/vhs/token.cr:74, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SHIFT	const	ported	src/vhs/token.cr:47, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SHOW	const	ported	src/vhs/token.cr:68, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SLASH	const	ported	src/vhs/token.cr:12, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SLEEP	const	ported	src/vhs/token.cr:44, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SOURCE	const	ported	src/vhs/token.cr:69, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::SPACE	const	ported	src/vhs/token.cr:45, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::STRING	const	ported	src/vhs/token.cr:52, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::TAB	const	ported	src/vhs/token.cr:46, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::THEME	const	ported	src/vhs/token.cr:88, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::TYPE	const	ported	src/vhs/token.cr:70, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::TYPING_SPEED	const	ported	src/vhs/token.cr:86, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::UP	const	ported	src/vhs/token.cr:61, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WAIT	const	ported	src/vhs/token.cr:95, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WAIT_PATTERN	const	ported	src/vhs/token.cr:97, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WAIT_TIMEOUT	const	ported	src/vhs/token.cr:96, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WIDTH	const	ported	src/vhs/token.cr:83, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WINDOW_BAR	const	ported	src/vhs/token.cr:92, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::const::WINDOW_BAR_SIZE	const	ported	src/vhs/token.cr:93, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
+token/token.go::func::IsCommand	func	ported	src/vhs/token.cr:191, spec/vhs/token_spec.cr:192	Crystal spells it Token.command?; the spec selects over all 77 constants and asserts the exact 22-token set.
+token/token.go::func::IsModifier	func	ported	src/vhs/token.cr:204, spec/vhs/token_spec.cr:209	Crystal spells it Token.modifier?; asserted to be exactly ALT and SHIFT.
+token/token.go::func::IsSetting	func	ported	src/vhs/token.cr:178, spec/vhs/token_spec.cr:174	Crystal spells it Token.setting?; the spec selects over all 77 constants and asserts the exact 21-token set.
+token/token.go::func::LookupIdentifier	func	ported	src/vhs/token.cr:224, spec/vhs/token_spec.cr:160	Asserts all 58 upstream keyword mappings plus the STRING fallback and that Home is not a keyword.
+token/token.go::func::ToCamel	func	ported	src/vhs/token.cr:209, spec/vhs/token_spec.cr:221	Ports upstream TestToCamel verbatim (SIMPLE, MULTIPLE_WORDS) plus empty and single-word cases; empty segments are handled instead of panicking like Go's p[:1].
+token/token.go::method::Type.String	method	ported	src/vhs/token.cr:229, spec/vhs/token_spec.cr:251	Crystal's Type is a Symbol, so the method becomes the module function Token.to_human_readable; it applies the same IsCommand/IsSetting -> ToCamel rule and is asserted for both token classes plus the raw fallback.
+token/token.go::struct::Token	struct	ported	src/vhs/token.cr:101, spec/vhs/token_spec.cr:267	Same four fields (type, literal, line, column); the spec asserts construction and the debug string.
+token/token.go::type::Type	type	ported	src/vhs/token.cr:5, spec/vhs/token_spec.cr:153	Divergence: upstream Type is a string type, the port aliases Symbol. Values are identical, so only string construction and Type.String differ (covered by to_human_readable).
+token/token_test.go::test::TestToCamel	test	ported	spec/vhs/token_spec.cr:221	Upstream TestToCamel's two cases (SIMPLE -> Simple, MULTIPLE_WORDS -> MultipleWords) are asserted verbatim.
 vhs.go::func::DefaultVHSOptions	func	missing	-	auto-generated
 vhs.go::func::New	func	missing	-	auto-generated
 vhs.go::method::VHS.ApplyLoopOffset	method	missing	-	auto-generated

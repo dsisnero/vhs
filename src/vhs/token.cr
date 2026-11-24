@@ -139,7 +139,6 @@ module Vhs
       "Tab"           => TAB,
       "Escape"        => ESCAPE,
       "End"           => END,
-      "Home"          => HOME,
       "Hide"          => HIDE,
       "Require"       => REQUIRE,
       "Show"          => SHOW,

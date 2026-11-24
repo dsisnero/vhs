@@ -9,26 +9,30 @@ are*, not *how the repo works*.
 ## Where we are
 
 - **Current focus:** finish reconciling the curated ledger with the code already
-  in `src/`. All four small blocks are done: `command.go` (39 of 41 rows),
-  `style.go` (21 of 21), `error.go` (5 of 5) and `evaluator.go` (2 of 2).
-  Next is the bulk reconciliation pass: `token/token.go` (85) is the largest
-  remaining block, and the lexer/parser spans are mostly written but unledgered.
+  in `src/`. `command.go`, `style.go`, `error.go`, `evaluator.go` and
+  `token/token.go` (85 rows + `TestToCamel`) are reconciled. Next is
+  `parser/parser.go` (12) and `lexer/lexer.go` (3), where the code exists and
+  only ledger work plus the six `parser_test.go`/two `lexer_test.go` IDs remain.
 - **Next up:**
-  1. Reconcile the remaining source rows: `token/token.go` (85),
-     `parser/parser.go` (12), `lexer/lexer.go` (3), `vhs.go` (13), `draw.go`
-     (11), `video.go` (6), `themes.go` (4), `screenshot.go` (3), `record.go`
-     (1), `shell.go` (1).
-  2. Map the existing lexer/parser/token specs onto the nine `missing` test IDs
-     in `go_test_parity.tsv` (`lexer/lexer_test.go` ×2, `parser/parser_test.go`
-     ×6, `token/token_test.go` ×1).
+  1. Reconcile `parser/parser.go` (12) and `lexer/lexer.go` (3) rows, then map
+     their upstream tests: `parser_test.go` (`TestParser`, `TestParserErrors`,
+     `TestParseCtrl`, `TestParseScreeenshot`, `TestParseSource`,
+     `TestParseTapeFile`) and `lexer_test.go` (`TestNextToken`,
+     `TestLexTapeFile`).
+  2. Reconcile the remaining source rows: `vhs.go` (13), `draw.go` (11),
+     `video.go` (6), `testing.go` (5), `themes.go` (4), `screenshot.go` (3),
+     `record.go` (1), `shell.go` (1).
   3. Port `ffmpeg.go`'s filter/stream builders (16 rows) — today
      `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
      spec coverage.
   4. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
      `syntax.go`, `testing.go`, `man.go`.
 - **Status by area:**
-  - Lexer / token / parser: implemented in `src/vhs/{lexer,token,parser}.cr`
-    with specs; ledger rows still `missing` (100 source rows + 9 test IDs).
+  - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
+    ported — the spec carries the full 77-constant table, the 58-entry keyword
+    table, and exact IsSetting/IsCommand/IsModifier membership sets.
+  - Lexer / parser: implemented in `src/vhs/{lexer,parser}.cr` with specs;
+    ledger rows still `missing` (15 source rows + 8 test IDs).
   - Evaluate entrypoint: `EvaluatorOption` is `ported` (alias applied after
     stop, asserted by three specs); `Evaluate` itself is `partial` because the
     SET/OUTPUT/REQUIRE highlight print, dimension validation, and the render
@@ -90,14 +94,13 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `ef833d6` port: reconcile evaluator.go with EvaluatorOption
   (working tree clean at that commit).
-- **Ledger `missing` rows left (171), by file:** `token/token.go` 85,
-  `ffmpeg.go` 16, `vhs.go` 13, `parser/parser.go` 12, `draw.go` 11, `video.go`
-  6, `testing.go` 5, `themes.go` 4, `lexer/lexer.go` 3, `screenshot.go` 3,
-  `record.go` 1, `shell.go` 1, `publish.go` 1, `syntax.go` 1, plus the 9 test
-  IDs.
-- **Gates:** `make lint` pass (24 files); `make test` `110 examples, 0
+- **Ledger `missing` rows left (85), by file:** `ffmpeg.go` 16, `vhs.go` 13,
+  `parser/parser.go` 12, `draw.go` 11, `video.go` 6, `testing.go` 5,
+  `themes.go` 4, `screenshot.go` 3, `lexer/lexer.go` 3, `record.go` 1,
+  `shell.go` 1, `publish.go` 1, `syntax.go` 1, plus the 8 remaining test IDs.
+- **Gates:** `make lint` pass (24 files); `make test` `113 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 37 `ported`, 16 `partial`, 23 `in_progress`, 171 `missing`, 1
+  rows: 123 `ported`, 16 `partial`, 23 `in_progress`, 85 `missing`, 1
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -114,8 +117,10 @@ Keep this block accurate after every feature: the next session reads it first
       `ErrorColumnOffset`, `print_error`/`print_errors`, and wire the CLI to it
 - [x] Reconcile `evaluator.go` (2) — port `EvaluatorOption`, accept options in
       `Vhs.evaluate`, drop the dead duplicate `VHS#evaluate`
-- [ ] Reconcile `token/token.go` (85), `parser/parser.go` (12),
-      `lexer/lexer.go` (3) rows
+- [x] Reconcile `token/token.go` (85) — full constant/keyword/classification
+      tables in `spec/vhs/token_spec.cr`; dropped the non-upstream `Home`
+      keyword
+- [ ] Reconcile `parser/parser.go` (12), `lexer/lexer.go` (3) rows
 - [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
       `screenshot.go` (3), `record.go`, `shell.go` rows
 - [ ] Regenerate `go_source_parity.tsv` and confirm `make inventory`
@@ -126,7 +131,7 @@ Keep this block accurate after every feature: the next session reads it first
 - [ ] `parser/parser_test.go` (`TestParser`, `TestParserErrors`,
       `TestParseCtrl`, `TestParseScreeenshot`, `TestParseSource`,
       `TestParseTapeFile`)
-- [ ] `token/token_test.go::TestToCamel`
+- [x] `token/token_test.go::TestToCamel`
 
 ## Phase 3 — Renderer parity
 
@@ -156,6 +161,14 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Vhs::Token::Type` is a `Symbol` alias where upstream's `Type` is a string
+  type. Values match one-for-one, so this shows up only in string construction
+  and in `Type.String`, which becomes `Token.to_human_readable` because a Symbol
+  cannot override `to_s`.
+- The port's keyword table has no `Home` entry: upstream defines a `HOME` token
+  (used by `record.go` and `IsCommand`) but never maps the bare word, so `Home`
+  in a tape is a `STRING` identifier that the parser rejects — the Crystal table
+  had added the mapping and now matches upstream.
 - `Vhs.evaluate` needs two overloads (`evaluate(tape, output)` and
   `evaluate(tape, output, *opts : EvaluatorOption)`) because a Crystal typed
   splat parameter requires at least one argument; upstream's variadic call shape
