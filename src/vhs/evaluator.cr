@@ -179,18 +179,6 @@ module Vhs
     @@clipboard = text
   end
 
-  # InvalidSyntaxError is returned when the parser encounters one or more errors.
-  class InvalidSyntaxError < Exception
-    getter errors : Array(Parser::ParserError)
-
-    def initialize(@errors : Array(Parser::ParserError))
-    end
-
-    def message : String
-      "parser: #{errors.size} error(s)"
-    end
-  end
-
   # ThemeNotFoundError is returned when a requested theme is not found.
   class ThemeNotFoundError < Exception
     getter theme : String
@@ -1991,7 +1979,6 @@ module Vhs
   #
   # Returns an array of errors encountered during evaluation.
   def evaluate(tape : String, output : IO = STDOUT) : Array(Exception)
-    STDERR.puts "DEBUG: evaluate called"
     # Parse the tape
     lexer = Lexer.new(tape)
     parser = Parser.new(lexer)

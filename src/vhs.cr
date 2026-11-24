@@ -15,8 +15,6 @@ module Vhs::CLI
   extend self
 
   def run(args = ARGV)
-    STDERR.puts "DEBUG: CLI run with args #{args}"
-    STDERR.flush
     input = ""
     input_file = ""
     quiet = false
@@ -35,7 +33,6 @@ module Vhs::CLI
         publish = true
       end
       parser.on("-v", "--version", "Show version") do
-        STDERR.puts "DEBUG: version flag triggered"
         puts "vhs #{Vhs::VERSION}"
         exit 0
       end
@@ -44,10 +41,8 @@ module Vhs::CLI
         exit 0
       end
       parser.unknown_args do |unknown|
-        STDERR.puts "DEBUG: unknown_args called with #{unknown}"
         if unknown.size > 0
           input_file = unknown[0]
-          STDERR.puts "DEBUG: input_file #{input_file}"
           if input_file == "-"
             # Read from stdin
             input = STDIN.gets_to_end
@@ -72,7 +67,6 @@ module Vhs::CLI
       end
     end
 
-    STDERR.puts "DEBUG: Input size #{input.size}"
     if input.empty?
       STDERR.puts "Error: no input provided"
       exit 1
@@ -86,9 +80,7 @@ module Vhs::CLI
     errors = Vhs.evaluate(input, quiet ? IO::Memory.new : STDOUT)
 
     unless errors.empty?
-      errors.each do |err|
-        STDERR.puts "Error: #{err.message}"
-      end
+      Vhs.print_errors(STDERR, input, errors)
       exit 1
     end
 

@@ -54,11 +54,11 @@ draw.go::method::rect.ColorModel	method	missing	-	auto-generated
 draw.go::method::roundedrect.At	method	missing	-	auto-generated
 draw.go::method::roundedrect.Bounds	method	missing	-	auto-generated
 draw.go::method::roundedrect.ColorModel	method	missing	-	auto-generated
-error.go::const::ErrorColumnOffset	const	missing	-	auto-generated
-error.go::func::LineNumber	func	missing	-	auto-generated
-error.go::func::Underline	func	missing	-	auto-generated
-error.go::method::InvalidSyntaxError.Error	method	missing	-	auto-generated
-error.go::struct::InvalidSyntaxError	struct	missing	-	auto-generated
+error.go::const::ErrorColumnOffset	const	ported	src/vhs/error.cr:17, spec/vhs/error_spec.cr:24	Offset value 5 asserted; print_error uses it to indent the caret line under the token column.
+error.go::func::LineNumber	func	ported	src/vhs/error.cr:34, spec/vhs/error_spec.cr:44	Formats ' %2d │ ' with the same gutter; lipgloss LineNumberStyle (color 8) is emitted as ANSI 90 rather than negotiated at runtime.
+error.go::func::Underline	func	ported	src/vhs/error.cr:29, spec/vhs/error_spec.cr:30	Repeats '^' n times in ERROR_STYLE; count, zero-length case, and ANSI wrapping asserted.
+error.go::method::InvalidSyntaxError.Error	method	ported	src/vhs/error.cr:10, spec/vhs/error_spec.cr:12	Crystal spells the Error() method message; returns 'parser: N error(s)' and is asserted for two parser errors.
+error.go::struct::InvalidSyntaxError	struct	ported	src/vhs/error.cr:3, spec/vhs/error_spec.cr:12	Holds []parser.Error as errors; print_errors expands it into per-error gutters plus the summary line. Moved out of evaluator.cr to mirror upstream error.go.
 evaluator.go::func::Evaluate	func	missing	-	auto-generated
 evaluator.go::type::EvaluatorOption	type	missing	-	auto-generated
 ffmpeg.go::func::NewScreenshotFilterComplexBuilder	func	missing	-	auto-generated
