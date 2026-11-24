@@ -110,27 +110,27 @@ screenshot.go::func::NewScreenshotOptions	func	missing	-	auto-generated
 screenshot.go::struct::ScreenshotOptions	struct	missing	-	auto-generated
 screenshot_test.go::test::TestScreenshot	test	ported	spec/vhs/screenshot_spec.cr:4	Crystal covers screenshot capture toggling and screenshot frame bookkeeping through ScreenshotOptions.make_screenshot and enable_frame_capture.
 shell.go::struct::Shell	struct	missing	-	auto-generated
-style.go::const::Background	const	missing	-	auto-generated
-style.go::const::Black	const	missing	-	auto-generated
-style.go::const::Blue	const	missing	-	auto-generated
-style.go::const::BrightBlack	const	missing	-	auto-generated
-style.go::const::BrightBlue	const	missing	-	auto-generated
-style.go::const::BrightCyan	const	missing	-	auto-generated
-style.go::const::BrightGreen	const	missing	-	auto-generated
-style.go::const::BrightMagenta	const	missing	-	auto-generated
-style.go::const::BrightRed	const	missing	-	auto-generated
-style.go::const::BrightWhite	const	missing	-	auto-generated
-style.go::const::BrightYellow	const	missing	-	auto-generated
-style.go::const::Cyan	const	missing	-	auto-generated
-style.go::const::Foreground	const	missing	-	auto-generated
-style.go::const::Green	const	missing	-	auto-generated
-style.go::const::Indigo	const	missing	-	auto-generated
-style.go::const::Magenta	const	missing	-	auto-generated
-style.go::const::Red	const	missing	-	auto-generated
-style.go::const::White	const	missing	-	auto-generated
-style.go::const::Yellow	const	missing	-	auto-generated
-style.go::func::DefaultStyleOptions	func	missing	-	auto-generated
-style.go::struct::StyleOptions	struct	missing	-	auto-generated
+style.go::const::Background	const	ported	src/vhs/evaluator.cr:9, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Background, asserted against the Crystal constant.
+style.go::const::Black	const	ported	src/vhs/evaluator.cr:11, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Black, asserted against the Crystal constant.
+style.go::const::Blue	const	ported	src/vhs/evaluator.cr:19, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Blue, asserted against the Crystal constant.
+style.go::const::BrightBlack	const	ported	src/vhs/evaluator.cr:12, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightBlack, asserted against the Crystal constant.
+style.go::const::BrightBlue	const	ported	src/vhs/evaluator.cr:20, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightBlue, asserted against the Crystal constant.
+style.go::const::BrightCyan	const	ported	src/vhs/evaluator.cr:24, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightCyan, asserted against the Crystal constant.
+style.go::const::BrightGreen	const	ported	src/vhs/evaluator.cr:16, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightGreen, asserted against the Crystal constant.
+style.go::const::BrightMagenta	const	ported	src/vhs/evaluator.cr:22, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightMagenta, asserted against the Crystal constant.
+style.go::const::BrightRed	const	ported	src/vhs/evaluator.cr:14, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightRed, asserted against the Crystal constant.
+style.go::const::BrightWhite	const	ported	src/vhs/evaluator.cr:26, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightWhite, asserted against the Crystal constant.
+style.go::const::BrightYellow	const	ported	src/vhs/evaluator.cr:18, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant BrightYellow, asserted against the Crystal constant.
+style.go::const::Cyan	const	ported	src/vhs/evaluator.cr:23, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Cyan, asserted against the Crystal constant.
+style.go::const::Foreground	const	ported	src/vhs/evaluator.cr:10, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Foreground, asserted against the Crystal constant.
+style.go::const::Green	const	ported	src/vhs/evaluator.cr:15, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Green, asserted against the Crystal constant.
+style.go::const::Indigo	const	ported	src/vhs/evaluator.cr:27, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Indigo, asserted against the Crystal constant.
+style.go::const::Magenta	const	ported	src/vhs/evaluator.cr:21, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Magenta, asserted against the Crystal constant.
+style.go::const::Red	const	ported	src/vhs/evaluator.cr:13, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Red, asserted against the Crystal constant.
+style.go::const::White	const	ported	src/vhs/evaluator.cr:25, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant White, asserted against the Crystal constant.
+style.go::const::Yellow	const	ported	src/vhs/evaluator.cr:17, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Yellow, asserted against the Crystal constant.
+style.go::func::DefaultStyleOptions	func	ported	src/vhs/evaluator.cr:1520, spec/vhs/style_spec.cr:53	All ten fields assert upstream DefaultStyleOptions values, including MarginFill/WindowBarColor/BackgroundColor from DefaultTheme.Background.
+style.go::struct::StyleOptions	struct	partial	src/vhs/evaluator.cr:1259, spec/vhs/style_spec.cr:53	Same ten fields as upstream StyleOptions and every field is asserted through default_style_options; divergence: bare StyleOptions.new defaults to the DefaultStyleOptions numbers (1200/600/60/30) where a Go zero value is 0/"", which only affects struct defaults, not the DefaultVHSOptions path.
 syntax.go::func::Highlight	func	missing	-	auto-generated
 testing.go::func::DefaultTestOptions	func	missing	-	auto-generated
 testing.go::method::VHS.Buffer	method	missing	-	auto-generated
