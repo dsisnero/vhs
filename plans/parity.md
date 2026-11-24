@@ -88,8 +88,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `ebae402` port: port error.go display helpers into
-  src/vhs/error.cr (working tree clean at that commit).
+- **Last commit:** `ef833d6` port: reconcile evaluator.go with EvaluatorOption
+  (working tree clean at that commit).
 - **Ledger `missing` rows left (171), by file:** `token/token.go` 85,
   `ffmpeg.go` 16, `vhs.go` 13, `parser/parser.go` 12, `draw.go` 11, `video.go`
   6, `testing.go` 5, `themes.go` 4, `lexer/lexer.go` 3, `screenshot.go` 3,
