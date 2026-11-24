@@ -98,8 +98,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `c8341a2` port: reconcile token/token.go and drop the
-  non-upstream Home keyword (working tree clean at that commit).
+- **Last commit:** `c3b8a9d` port: port the upstream lexer tests and reconcile
+  lexer/lexer.go (working tree clean at that commit).
 - **Ledger `missing` rows left (80), by file:** `ffmpeg.go` 16, `vhs.go` 13,
   `parser/parser.go` 12, `draw.go` 11, `video.go` 6, `testing.go` 5,
   `themes.go` 4, `screenshot.go` 3, `record.go` 1, `shell.go` 1,
