@@ -74,6 +74,12 @@ module Vhs::CLI
       record_command(args[1..])
     when "publish"
       publish_command(args[1..])
+    when "new"
+      new_command(args[1..])
+    when "themes"
+      themes_command(args[1..])
+    when "validate"
+      validate_command(args[1..])
     else
       evaluate(args)
     end
@@ -235,6 +241,117 @@ module Vhs::CLI
     end
 
     exit 0
+  end
+
+  # new_command scaffolds a tape file, upstream's `new` command.
+  private def new_command(args : Array(String)) : NoReturn
+    quiet = false
+    names = [] of String
+
+    OptionParser.parse(args) do |parser|
+      parser.banner = "Usage: vhs new <name>"
+      parser.on("-q", "--quiet", "Quiet mode (suppress logs)") do
+        quiet = true
+      end
+      parser.on("-h", "--help", "Show this help") do
+        puts parser
+        exit 0
+      end
+      parser.unknown_args do |unknown|
+        names = unknown.to_a
+      end
+    end
+
+    unless names.size == 1
+      STDERR.puts "Error: accepts 1 arg(s), received #{names.size}"
+      exit 1
+    end
+
+    begin
+      file = Vhs.new_tape(names[0])
+    rescue ex
+      STDERR.puts ex.message
+      exit 1
+    end
+
+    STDERR.puts "Created #{file}" unless quiet
+    exit 0
+  end
+
+  # themes_command lists the available themes, upstream's `themes` command. It
+  # writes to stderr because upstream logs the list.
+  private def themes_command(args : Array(String)) : NoReturn
+    quiet = false
+    markdown = false
+
+    OptionParser.parse(args) do |parser|
+      parser.banner = "Usage: vhs themes [options]"
+      parser.on("--markdown", "Output as markdown") do
+        markdown = true
+      end
+      parser.on("-q", "--quiet", "Quiet mode (suppress logs)") do
+        quiet = true
+      end
+      parser.on("-h", "--help", "Show this help") do
+        puts parser
+        exit 0
+      end
+    end
+
+    STDERR.print Vhs.theme_list(markdown: markdown) unless quiet
+    exit 0
+  end
+
+  # validate_command parses tape files without running them, upstream's `validate`
+  # command. Files that cannot be read are skipped, like upstream.
+  private def validate_command(args : Array(String)) : NoReturn
+    quiet = false
+    files = [] of String
+
+    OptionParser.parse(args) do |parser|
+      parser.banner = "Usage: vhs validate <file>..."
+      parser.on("-q", "--quiet", "Quiet mode (suppress logs)") do
+        quiet = true
+      end
+      parser.on("-h", "--help", "Show this help") do
+        puts parser
+        exit 0
+      end
+      parser.unknown_args do |unknown|
+        files = unknown.to_a
+      end
+    end
+
+    if files.empty?
+      STDERR.puts "Error: requires at least 1 arg(s), only received 0"
+      exit 1
+    end
+
+    exit(validate_files(files, quiet) ? 0 : 1)
+  end
+
+  # validate_files reports every parse error and returns whether all files were
+  # valid.
+  private def validate_files(files : Array(String), quiet : Bool) : Bool
+    valid = true
+
+    files.each do |file|
+      begin
+        input = File.read(file)
+      rescue
+        next
+      end
+
+      errors = Vhs.validate_tape(input)
+      next if errors.empty?
+
+      valid = false
+      STDERR.puts Styles::ERROR_FILE_STYLE.render(file) unless quiet
+      errors.each { |error| Vhs.print_error(STDERR, input, error) }
+    end
+
+    STDERR.puts "invalid tape file(s)" unless valid
+    valid
   end
 
   # publish_command uploads a GIF, upstream's `publish` command.

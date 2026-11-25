@@ -14,20 +14,23 @@ are*, not *how the repo works*.
   `termios` raw mode), mirrors stdin into the tape buffer and the pty, and prints
   what `input_to_tape` makes of it; `vhs publish` streams the GIF to
   `ghost.charm.sh` with the system OpenSSH client, keeping upstream's Ed25519 key
-  and `known_hosts` files in the platform data directory. The CLI now dispatches
-  subcommands (`record`, `publish`) and applies `-o` through an
-  `EvaluatorOption` instead of the previous TODO no-op. Ledger: 245 `ported`,
-  3 `intentional_divergence`, 0 `missing`.
+  and `known_hosts` files in the platform data directory. The CLI dispatches
+  every upstream subcommand except `serve`/`man` (`record`, `publish`, `new`,
+  `themes`, `validate`) and applies `-o` through an `EvaluatorOption` instead of
+  the previous TODO no-op. Ledger: 245 `ported`, 3 `intentional_divergence`,
+  0 `missing`.
 - **Next up:**
   1. Port `serve.go`/`man.go` (and the ledger for them): their symbols are not in
      the regex discovery's kind vocabulary, so this needs a reviewed discovery or
      manifest change first.
   2. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
-  3. Port the remaining upstream subcommands (`new`, `themes`, `validate`, and
-     cobra's `--version`/help shapes). They are not ledger rows — `main.go` and
-     `embed.go` are outside the regex discovery — but `sorted_theme_names` and
-     the parser error printer they need are already ported.
+  3. Embed `themes.json` the way upstream's `go:embed` does. It is still read
+     from `vendor/vhs/themes.json` at runtime, so an installed shard silently has
+     no themes at all (`Set Theme` reports every theme as missing and
+     `vhs themes` prints nothing). The fix is a data-embedding decision:
+     a checked-in copy under `src/`, or `baked_file_system` (already in `lib/`
+     through `terminfo`) with a declared dependency.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -121,12 +124,16 @@ are*, not *how the repo works*.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
-  - CLI: the root command (`-o`, `-q`, `-p`, `-v`, `-h`, file/stdin), the
-    `record` subcommand (`-s/--shell`) and the `publish` subcommand (`-q`) are
-    ported, dispatched on `args.first?` instead of through cobra. `-o` applies
-    the outputs through an `EvaluatorOption` and `-p`/`VHS_PUBLISH=true`
-    publishes the resulting GIF, both like upstream main.go. `serve`/`tty`/`man`
-    are not ported and not yet in the ledger.
+  - CLI: every subcommand except `serve`/`man` is ported — the root command
+    (`-o`, `-q`, `-p`, `-v`, `-h`, file/stdin), `record` (`-s/--shell`),
+    `publish` (`-q`), `new`, `themes` (`--markdown`), and `validate` — dispatched
+    on `args.first?` instead of through cobra. `-o` applies the outputs through
+    an `EvaluatorOption` and `-p`/`VHS_PUBLISH=true` publishes the resulting
+    GIF, both like upstream main.go. `new` writes the embedded demo tape with
+    the output renamed, `themes` lists `sorted_theme_names` one per line (or a
+    markdown list) on stderr like upstream's `log.Printf`, and `validate` parses
+    without running, skipping unreadable files and reporting through
+    `print_error`. `serve`/`tty`/`man` are not ported and not yet in the ledger.
   - Recorder: `Vhs.record` starts the shell on a pty and prints the tape. The
     shell gets upstream's session and controlling terminal — `setsid` +
     `TIOCSCTTY` + the inherited window size — from the `vhs-record-shell`
@@ -200,7 +207,7 @@ are*, not *how the repo works*.
   browser-runtime migration (working tree clean at that commit).
 - **Ledger:** 248 rows: 245 `ported`, 3 `intentional_divergence`, 0 `missing`.
   All 17 upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (44 files); `make test` `256 examples, 0
+- **Gates:** `make lint` pass (47 files); `make test` `267 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 245 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 3
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .

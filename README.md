@@ -88,6 +88,11 @@ All of upstream's CLI surfaces are implemented:
   `$XDG_DATA_HOME/vhs` elsewhere).
 * `vhs -o out.gif tape.tape` overrides the tape's outputs by extension, and
   `-p`/`VHS_PUBLISH=true` publishes the result.
+* `vhs new demo` writes a commented `demo.tape` scaffold (upstream's embedded
+  example tape, with `Output demo.gif` renamed to match).
+* `vhs themes [--markdown]` lists every built-in theme, one per line.
+* `vhs validate demo.tape other.tape` parses tapes without running them and
+  reports syntax errors with the same gutter and carets as evaluation.
 
 `record` needs the `vhs-record-shell` launcher next to the `vhs` binary (both are
 built by `make build`); it can also be pointed at with `$VHS_RECORD_HELPER` or

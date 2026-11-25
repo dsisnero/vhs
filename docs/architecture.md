@@ -32,8 +32,11 @@ Current port status, area-by-area progress, and the ordered backlog live in
   shell is started through: it does `setsid`/`TIOCSCTTY`/window size and then
   `exec`s the shell, which is the work Crystal's `Process` cannot do in the child.
 - `src/vhs/publish.cr` implements `vhs publish` (upstream's `publish.go`) and
-  `src/vhs.cr` is the CLI: the root command plus the `record` and `publish`
-  subcommands that upstream main.go registers with cobra.
+  `src/vhs.cr` is the CLI: the root command plus the `record`, `publish`, `new`,
+  `themes`, and `validate` subcommands that upstream main.go registers with
+  cobra. `src/vhs/commands.cr` holds the package-level helpers behind `new`,
+  `themes`, and `validate`, and `src/vhs/demo_tape.cr` is upstream's embedded
+  `examples/demo.tape`.
 - `vendor/vhs` remains the source of truth for API behavior, edge cases,
   fixtures, and tests.
 
