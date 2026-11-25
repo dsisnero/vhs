@@ -123,8 +123,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `046b50d` port: port ApplyLoopOffset and Cleanup, wire the
-  evaluate teardown (working tree clean at that commit).
+- **Last commit:** `022cd8c` port: close the ledger — port DefaultTestOptions,
+  record the CLI divergences (working tree clean at that commit).
 - **Ledger `missing` rows left: none.** 248 rows: 202 `ported`, 24 `partial`,
   15 `in_progress`, 7 `intentional_divergence`. No test IDs are `missing`.
 - **Gates:** `make lint` pass (31 files); `make test` `179 examples, 0
