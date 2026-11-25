@@ -15,6 +15,6 @@ def drop_outputs_option : Vhs::EvaluatorOption
   end
 end
 
-def evaluate_without_render(tape : String, output : IO = STDOUT) : Array(Exception)
+def evaluate_without_render(tape : String, output : IO = IO::Memory.new) : Array(Exception)
   Vhs.evaluate(tape, output, drop_outputs_option)
 end

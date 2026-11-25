@@ -8,18 +8,19 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the renderer and the `VHS` lifecycle are done. A tape
-  captures `frame-text-%05d.png` + `frame-cursor-%05d.png`, `Vhs.evaluate`
-  renders (`ApplyLoopOffset` → ffmpeg → optional frames output → `Cleanup`), and
-  ffmpeg runs upstream's filter chain. Only **4 rows** are still `missing`, all
-  CLI surfaces: `publish.go::Publish`, `syntax.go::Highlight`,
+- **Current focus:** the evaluator is functionally complete for the port's
+  architecture — it echoes highlighted commands, warns about ignored
+  mid-tape `Set`s, validates dimensions, renders, and tears down. Only **3 rows**
+  are still `missing`, all CLI-only: `publish.go::Publish`,
   `record.go::Record`, `testing.go::DefaultTestOptions`.
 - **Next up:**
-  1. Port `syntax.go::Highlight` (the coloured command echo, which also unblocks
-     the two `Evaluate` gaps) and `testing.go` (`DefaultTestOptions` + `vhs test`).
-  2. Port `record.go`'s recorder entry point and `publish.go` (Charm publish).
-  3. Port `serve.go`/`tty.go`/`man.go` (they are not in the ledger's kind
-     vocabulary yet, so add them with the CLI phase).
+  1. Port the `vhs test` command surface (`testing.go::DefaultTestOptions` plus
+     the `test` subcommand that compares `TestOptions.Output` against
+     `TestOptions.Golden`).
+  2. Port `record.go`'s recorder entry point (the `vhs record` command) and
+     `publish.go` (Charm publish).
+  3. Port `serve.go`/`tty.go`/`man.go` — add them to the ledger with the CLI
+     phase, since their symbols are not in the current regex discovery.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -28,6 +29,10 @@ are*, not *how the repo works*.
     ported — `spec/vhs/lexer_spec.cr` now replays the 81-expectation
     `TestNextToken` tape and the 199-expectation `all.tape` fixture table
     (checked in as `spec/fixtures/all.tape`).
+  - Command echo: `src/vhs/highlight.cr` ports `syntax.go::Highlight` (per-token
+    option/argument styles, ENV `=`, faint hidden commands, elided source
+    prefix) with ANSI codes standing in for lipgloss, and the evaluator prints
+    through it like upstream (header in colour, hidden/ignored commands faint).
   - Parser: all 12 `parser/parser.go` rows reconciled (`CommandType` is an
     `intentional_divergence` because upstream's type is deadcode) and all six
     upstream parser tests ported — `spec/vhs/parser_spec.cr` replays the
@@ -118,12 +123,12 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `046b50d` port: port ApplyLoopOffset and Cleanup, wire the
   evaluate teardown (working tree clean at that commit).
-- **Ledger `missing` rows left (4), all CLI-only:** `publish.go::Publish`,
-  `syntax.go::Highlight`, `record.go::Record`,
-  `testing.go::DefaultTestOptions`. No test IDs are `missing` any more.
-- **Gates:** `make lint` pass (29 files); `make test` `170 examples, 0
+- **Ledger `missing` rows left (3), all CLI-only:** `publish.go::Publish`,
+  `record.go::Record`, `testing.go::DefaultTestOptions`. No test IDs are
+  `missing` any more.
+- **Gates:** `make lint` pass (31 files); `make test` `178 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 200 `ported`, 24 `partial`, 15 `in_progress`, 4 `missing`, 5
+  rows: 201 `ported`, 24 `partial`, 15 `in_progress`, 3 `missing`, 5
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -179,9 +184,11 @@ Keep this block accurate after every feature: the next session reads it first
 
 ## Phase 4 — CLI surfaces
 
+- [x] `syntax.go` (`Highlight` + the evaluator's echo/warn/dimension checks)
+- [ ] `testing.go` (`vhs test` + `DefaultTestOptions`)
 - [ ] `publish.go` (Charm publish path)
 - [ ] `serve.go` / `tty.go` (server + tty handling, `serve_unix.go` first)
-- [ ] `syntax.go`, `testing.go`, `man.go`
+- [ ] `man.go`
 - [ ] Evaluate `token/token.go` native tree-sitter migration as a separate
       reviewed branch
 
@@ -197,6 +204,11 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Highlight` has no lipgloss: each upstream style becomes the 16-color ANSI code
+  it resolves to, and `NoneStyle`/`KeywordStyle` (which have no attributes)
+  become empty strings. `number?`/`time?` keep upstream's regexes, including
+  `^[0-9]+m?s$` not matching a bare `1m`, and the source path is measured in
+  characters instead of go-runewidth's display cells.
 - `Output frames/`: upstream renames the temp frame directory to the raw
   argument (trailing slash), which fails silently, and the rename also fails
   across filesystems because the frame input lives in the system temp dir. The

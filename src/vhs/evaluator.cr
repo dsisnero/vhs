@@ -1615,11 +1615,63 @@ module Vhs
     # Start VHS
     v.start
 
-    # Execute remaining commands
-    cmds.each do |cmd|
-      unless (cmd.type == Token::SET && cmd.options == "Shell") || cmd.type == Token::ENV
-        err = execute(cmd, v)
-        v.errors << err if err
+    # Settings, outputs, and requires run first and are echoed in full color.
+    # Divergence: upstream starts recording after this loop; the port starts
+    # capture in Start, before it.
+    offset = cmds.size
+    cmds.each_with_index do |cmd, i|
+      if cmd.type == Token::SET || cmd.type == Token::OUTPUT || cmd.type == Token::REQUIRE
+        output.puts Highlight.highlight(cmd, false)
+        if cmd.options != "Shell"
+          err = execute(cmd, v)
+          return [err] of Exception if err
+        end
+      else
+        offset = i
+        break
+      end
+    end
+
+    # Make sure the image is big enough to fit the padding, bar, and margins.
+    video = v.options.video
+    min_width = double(video.style.padding) + double(video.style.margin)
+    min_height = double(video.style.padding) + double(video.style.margin)
+    unless video.style.window_bar.empty?
+      min_height += video.style.window_bar_size
+    end
+    if video.style.height < min_height || video.style.width < min_width
+      v.errors << Exception.new("Dimensions must be at least #{min_width} x #{min_height}")
+    end
+
+    if !v.errors.empty?
+      v.stop
+      v.cleanup
+      return v.errors
+    end
+
+    # Remaining commands execute in order. Settings after the header are ignored
+    # with a warning, matching upstream.
+    cmds[offset..].each do |cmd|
+      is_setting = cmd.type == Token::SET && cmd.options != "TypingSpeed"
+      if is_setting
+        STDERR.puts "#{ERROR_STYLE}WARN: 'Set #{cmd.options} #{cmd.args}' has been ignored. " \
+                    "Move the directive to the top of the file.\n" \
+                    "Learn more: https://github.com/charmbracelet/vhs#settings#{STYLE_RESET}"
+      end
+      if is_setting || cmd.type == Token::REQUIRE
+        output.puts Highlight.highlight(cmd, true)
+        next
+      end
+
+      output.puts Highlight.highlight(
+        cmd,
+        !v.recording? || cmd.type == Token::SHOW || cmd.type == Token::HIDE
+      )
+
+      if err = execute(cmd, v)
+        v.stop
+        v.cleanup
+        return [err] of Exception
       end
     end
 
