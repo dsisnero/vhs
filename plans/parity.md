@@ -116,9 +116,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `518e8b9` port: reconcile the
-  vhs/testing/themes/screenshot/record/shell rows (working tree clean at that
-  commit).
+- **Last commit:** `046b50d` port: port ApplyLoopOffset and Cleanup, wire the
+  evaluate teardown (working tree clean at that commit).
 - **Ledger `missing` rows left (4), all CLI-only:** `publish.go::Publish`,
   `syntax.go::Highlight`, `record.go::Record`,
   `testing.go::DefaultTestOptions`. No test IDs are `missing` any more.
