@@ -400,6 +400,13 @@ module Vhs
 
     text = cmd.args
     typing_speed = v.options.typing_speed
+    unless cmd.options.empty?
+      parsed = Vhs.parse_duration(cmd.options)
+      if parsed.nil?
+        return Exception.new("failed to parse typing speed: #{cmd.options}")
+      end
+      typing_speed = parsed
+    end
 
     if typing_speed > 0.milliseconds
       # Type character by character with delay
@@ -560,58 +567,7 @@ module Vhs
     terminal = v.terminal
     return Exception.new("terminal not started") unless terminal
 
-    keys = cmd.args.split(' ')
-
-    # For terminal, we send control characters
-    # Ctrl+letter = ASCII 1-26 (A=1, B=2, ...)
-    # Special cases: Ctrl+[ = ESC (\x1b), Ctrl+\ = FS (\x1c), etc.
-    keys.each do |key|
-      case key.downcase
-      when "c"
-        terminal.write("\x03") # Ctrl+C (ETX)
-      when "d"
-        terminal.write("\x04") # Ctrl+D (EOT)
-      when "z"
-        terminal.write("\x1a") # Ctrl+Z (SUB)
-      when "["
-        terminal.write("\x1b") # Ctrl+[ = ESC
-      when "\\"
-        terminal.write("\x1c") # Ctrl+\ = FS
-      when "]"
-        terminal.write("\x1d") # Ctrl+] = GS
-      when "^"
-        terminal.write("\x1e") # Ctrl+^ = RS
-      when "_"
-        terminal.write("\x1f") # Ctrl+_ = US
-      when "?"
-        terminal.write("\x7f") # Ctrl+? = DEL
-      when "shift"
-        # Ctrl+Shift - just ignore shift for now
-        next
-      when "alt"
-        # Ctrl+Alt - just ignore alt for now
-        next
-      when "enter"
-        # Ctrl+Enter - send CR (but terminal might interpret differently)
-        terminal.write("\r")
-      when "space"
-        # Ctrl+Space = NUL
-        terminal.write("\x00")
-      when "backspace"
-        # Ctrl+Backspace = DEL
-        terminal.write("\x7f")
-      else
-        # Check if single letter A-Z
-        if key.size == 1 && key.matches?(/^[A-Za-z]$/)
-          char_code = key.downcase[0].ord - 'a'.ord + 1
-          terminal.write(char_code.chr.to_s)
-        else
-          # Unknown key, skip
-          next
-        end
-      end
-    end
-
+    terminal.write(Input.ctrl_sequence(cmd.args.split(' ')))
     nil
   end
 
@@ -621,31 +577,7 @@ module Vhs
     terminal = v.terminal
     return Exception.new("terminal not started") unless terminal
 
-    key = cmd.args
-
-    # In terminal, Alt+key is typically ESC followed by the key
-    # Alt+A = \x1ba, Alt+Enter = \x1b\r, etc.
-    case key.downcase
-    when "enter"
-      terminal.write("\x1b\r")
-    when "tab"
-      terminal.write("\x1b\t")
-    when "space"
-      terminal.write("\x1b ")
-    when "backspace"
-      terminal.write("\x1b\b")
-    else
-      # Check if single character
-      if key.size == 1
-        terminal.write("\x1b#{key}")
-      else
-        # Multi-character, send Alt for each?
-        key.each_char do |char|
-          terminal.write("\x1b#{char}")
-        end
-      end
-    end
-
+    terminal.write(Input.alt_sequence(cmd.args))
     nil
   end
 
@@ -655,59 +587,7 @@ module Vhs
     terminal = v.terminal
     return Exception.new("terminal not started") unless terminal
 
-    key = cmd.args
-
-    # For terminal, Shift just produces the shifted character
-    # Shift+A = 'A', Shift+1 = '!', etc.
-    # We need to map key names to shifted characters
-    case key.downcase
-    when "enter"
-      # Shift+Enter - just send Enter
-      terminal.write("\r")
-    when "tab"
-      # Shift+Tab is actually backtab: \x1b[Z
-      terminal.write("\x1b[Z")
-    when "space"
-      terminal.write(" ")
-    when "backspace"
-      terminal.write("\b")
-    else
-      # Single character - check if we need to shift it
-      if key.size == 1
-        char = key[0]
-        # Simple mapping for common shifted characters
-        shifted = case char
-                  when '1'  then '!'
-                  when '2'  then '@'
-                  when '3'  then '#'
-                  when '4'  then '$'
-                  when '5'  then '%'
-                  when '6'  then '^'
-                  when '7'  then '&'
-                  when '8'  then '*'
-                  when '9'  then '('
-                  when '0'  then ')'
-                  when '-'  then '_'
-                  when '='  then '+'
-                  when '['  then '{'
-                  when ']'  then '}'
-                  when '\\' then '|'
-                  when ';'  then ':'
-                  when '\'' then '"'
-                  when ','  then '<'
-                  when '.'  then '>'
-                  when '/'  then '?'
-                  when '`'  then '~'
-                  else
-                    char.upcase
-                  end
-        terminal.write(shifted.to_s)
-      else
-        # Multi-character, capitalize each?
-        terminal.write(key.upcase)
-      end
-    end
-
+    terminal.write(Input.shift_sequence(cmd.args))
     nil
   end
 
@@ -1011,51 +891,14 @@ module Vhs
       terminal = v.terminal
       return Exception.new("terminal not started") unless terminal
 
-      # Map key names to characters/sequences
-      key_char = case key
-                 when "Enter"
-                   "\n"
-                 when "Backspace"
-                   "\b"
-                 when "Delete"
-                   "\u007f" # DEL character
-                 when "Insert"
-                   "\e[2~"
-                 when "Tab"
-                   "\t"
-                 when "Escape"
-                   "\e"
-                 when "Space"
-                   " "
-                 when "ArrowUp"
-                   "\e[A"
-                 when "ArrowDown"
-                   "\e[B"
-                 when "ArrowRight"
-                   "\e[C"
-                 when "ArrowLeft"
-                   "\e[D"
-                 when "PageUp"
-                   "\e[5~"
-                 when "PageDown"
-                   "\e[6~"
-                 when "Home"
-                   "\e[1~"
-                 when "End"
-                   "\e[4~"
-                 else
-                   # Default: send as-is (for keys like "a", "b", etc.)
-                   key.downcase
-                 end
-
-      terminal.write(key_char)
-
-      # Handle repeat count
-      repeat = cmd.options.to_i? || 1
-      if repeat > 1
-        (repeat - 1).times do
-          terminal.write(key_char)
-        end
+      # Upstream takes the repeat count from the command's args and the per-key
+      # speed from its @duration option, defaulting to the global typing speed.
+      key_char = Input.key_sequence(key)
+      repeat = cmd.args.to_i? || 1
+      typing_speed = Vhs.parse_duration(cmd.options) || v.options.typing_speed
+      repeat.times do
+        terminal.write(key_char)
+        sleep(typing_speed) if typing_speed > 0.milliseconds
       end
 
       nil
