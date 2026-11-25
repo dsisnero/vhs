@@ -28,7 +28,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -39,7 +39,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -50,7 +50,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should_not be_empty
         errors.any?(Vhs::ThemeNotFoundError).should be_true
       end
@@ -62,7 +62,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -75,7 +75,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -88,7 +88,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -101,7 +101,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
         File.delete(path) if File.exists?(path)
       end
@@ -112,7 +112,7 @@ module Vhs
         Screenshot "test.jpg"
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should_not be_empty
       end
 
@@ -132,7 +132,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -143,7 +143,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -157,7 +157,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should be_empty
       end
 
@@ -179,7 +179,7 @@ module Vhs
         Sleep 0.1s
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         if errors.any?
           puts "Parser errors:"
           errors.each do |err|
@@ -200,7 +200,7 @@ module Vhs
         Set InvalidSetting 123
         TAPE
 
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.should_not be_empty
         if error = errors.first
           puts "Error class: #{error.class}"
@@ -220,7 +220,7 @@ module Vhs
           Source #{src_path}
           TAPE
 
-          errors = Vhs.evaluate(tape)
+          errors = evaluate_without_render(tape)
           errors.should be_empty
           File.delete(src_path)
         end
@@ -232,7 +232,7 @@ module Vhs
           Source #{src_path}
           TAPE
 
-          errors = Vhs.evaluate(tape)
+          errors = evaluate_without_render(tape)
           errors.should_not be_empty
         end
 
@@ -244,10 +244,52 @@ module Vhs
           Source #{src_path}
           TAPE
 
-          errors = Vhs.evaluate(tape)
+          errors = evaluate_without_render(tape)
           errors.should_not be_empty
           File.delete(src_path)
         end
+      end
+    end
+
+    describe "style settings" do
+      it "propagates SET style commands to the video and screenshot options" do
+        tape = <<-TAPE
+        Output test.gif
+        Set Width 400
+        Set Height 200
+        Set Padding 10
+        Set Margin 12
+        Set MarginFill "#2b2b2b"
+        Set WindowBar Colorful
+        Set WindowBarSize 20
+        Set BorderRadius 8
+        Sleep 0.1s
+        TAPE
+
+        inspected = false
+        inspect_style = ->(v : VHS) do
+          inspected = true
+          options = v.options
+          options.style.width.should eq(400)
+          options.style.height.should eq(200)
+          options.style.padding.should eq(10)
+          options.style.margin.should eq(12)
+          options.style.margin_fill.should eq("#2b2b2b")
+          options.style.window_bar.should eq("Colorful")
+          options.style.window_bar_size.should eq(20)
+          options.style.border_radius.should eq(8)
+
+          # The renderers read their own copy; upstream shares one StyleOptions.
+          options.video.style.should eq(options.style)
+          options.screenshot.style.should eq(options.style)
+
+          options.video.output = VideoOutputs.new
+          options.screenshot.screenshots.clear
+          nil
+        end
+
+        Vhs.evaluate(tape, IO::Memory.new, inspect_style).should be_empty
+        inspected.should be_true
       end
     end
 

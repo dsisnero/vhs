@@ -141,5 +141,46 @@ module Vhs
       # Save PNG
       CrImage::PNG.write(output_path, image)
     end
+
+    # Renders the cursor layer for one frame: a transparent image with the
+    # cursor cell filled, which ffmpeg overlays on the text layer the same way
+    # xterm.js' cursor canvas is overlaid.
+    def render_cursor(buffer : Array(Array(Char)), output_path : String,
+                      cursor_x : Int32 = 0, cursor_y : Int32 = 0,
+                      font_family : String = "DejaVu Sans Mono", font_size : Int32 = 22,
+                      letter_spacing : Float64 = 1.0, line_height : Float64 = 1.0,
+                      cursor_color : String = "#dddddd")
+      font_path = resolve_font_path(font_family)
+      unless File.exists?(font_path)
+        raise "Font file not found: #{font_path}"
+      end
+
+      font = FreeType::TrueType.load(font_path)
+      face = FreeType::TrueType.new_face(font, font_size.to_f64)
+
+      metrics = face.metrics
+      line_height_px = (metrics.height.to_i / 64.0 * line_height).round.to_i
+      advance, ok = face.glyph_advance('M')
+      unless ok
+        advance = face.glyph_advance('A')[0] # fallback
+      end
+      cell_width = (advance.to_i / 64.0 * letter_spacing).round.to_i
+
+      rows = buffer.size
+      cols = buffer[0]?.try(&.size) || 0
+
+      image = CrImage.rgba(cols * cell_width, rows * line_height_px)
+      color = CrImage::Color.parse(cursor_color)
+
+      x0 = cursor_x * cell_width
+      y0 = cursor_y * line_height_px
+      y0.upto(y0 + line_height_px - 1) do |y|
+        x0.upto(x0 + cell_width - 1) do |x|
+          image[x, y] = color
+        end
+      end
+
+      CrImage::PNG.write(output_path, image)
+    end
   end
 end

@@ -34,5 +34,29 @@ module Vhs
         File.delete(output_path) if File.exists?(output_path)
       end
     end
+
+    it "renders an opaque cursor cell over a transparent layer" do
+      buffer = [
+        ['H', 'i'],
+        ['!', ' '],
+      ]
+
+      Dir.mkdir_p("./temp")
+      output_path = "./temp/png-cursor.png"
+      begin
+        PNGRenderer.render_cursor(buffer, output_path, cursor_x: 0, cursor_y: 0,
+          font_size: 24, cursor_color: "#ff0000")
+
+        image = CrImage::PNG.read(output_path)
+        r, _, _, a = image[0, 0].rgba
+        r.should eq(0xFFFF)
+        a.should eq(0xFFFF)
+
+        _, _, _, far_alpha = image[image.bounds.max.x - 1, image.bounds.max.y - 1].rgba
+        far_alpha.should eq(0)
+      ensure
+        File.delete(output_path) if File.exists?(output_path)
+      end
+    end
   end
 end

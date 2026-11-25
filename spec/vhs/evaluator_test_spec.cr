@@ -7,7 +7,7 @@ module Vhs
       Set InvalidSetting 123
       TAPE
 
-      errors = Vhs.evaluate(tape)
+      errors = evaluate_without_render(tape)
       puts "Errors size: #{errors.size}"
       errors.each_with_index do |err, i|
         puts "Error #{i}: #{err.class} - #{err.message}"
@@ -22,7 +22,7 @@ module Vhs
       Sleep 0.1s
       TAPE
 
-      errors = Vhs.evaluate(tape)
+      errors = evaluate_without_render(tape)
       puts "Errors: #{errors.size}"
       errors.should be_empty
     end

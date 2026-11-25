@@ -15,26 +15,26 @@ command.go::func::ExecutePaste	func	partial	src/vhs/evaluator.cr:494, spec/vhs/e
 command.go::func::ExecuteRequire	func	in_progress	src/vhs/evaluator.cr:470	Implementation present; no spec asserts include-file behavior.
 command.go::func::ExecuteScreenshot	func	partial	src/vhs/evaluator.cr:504, spec/vhs/evaluator_spec.cr:95, spec/vhs/evaluator_spec.cr:109	PNG extension validation asserted; capture assertions live in screenshot_spec.cr.
 command.go::func::ExecuteSet	func	partial	src/vhs/evaluator.cr:364, spec/vhs/command_spec.cr:48	Settings registry count asserted (21 entries); per-setting parsing is unasserted.
-command.go::func::ExecuteSetBorderRadius	func	in_progress	src/vhs/evaluator.cr:1019	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetBorderRadius	func	ported	src/vhs/evaluator.cr:975, spec/vhs/evaluator_spec.cr:254	Asserts the radius reaches options.style and both renderer copies; the mask is covered by draw_spec.
 command.go::func::ExecuteSetCursorBlink	func	in_progress	src/vhs/evaluator.cr:1073	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetFontFamily	func	in_progress	src/vhs/evaluator.cr:810	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetFontSize	func	in_progress	src/vhs/evaluator.cr:798	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetFramerate	func	in_progress	src/vhs/evaluator.cr:865	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetHeight	func	in_progress	src/vhs/evaluator.cr:879	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetHeight	func	ported	src/vhs/evaluator.cr:842, spec/vhs/evaluator_spec.cr:254	Asserts height 200 reaches options.style and both renderer copies.
 command.go::func::ExecuteSetLetterSpacing	func	in_progress	src/vhs/evaluator.cr:893	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetLineHeight	func	in_progress	src/vhs/evaluator.cr:905	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetMargin	func	in_progress	src/vhs/evaluator.cr:981	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetMarginFill	func	in_progress	src/vhs/evaluator.cr:971	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetPadding	func	in_progress	src/vhs/evaluator.cr:931	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetMargin	func	ported	src/vhs/evaluator.cr:940, spec/vhs/evaluator_spec.cr:254	Asserts margin 12 reaches options.style and both renderer copies.
+command.go::func::ExecuteSetMarginFill	func	ported	src/vhs/evaluator.cr:931, spec/vhs/evaluator_spec.cr:254	Asserts the fill color reaches options.style and both renderer copies.
+command.go::func::ExecuteSetPadding	func	ported	src/vhs/evaluator.cr:893, spec/vhs/evaluator_spec.cr:254	Asserts padding 10 reaches options.style and both renderer copies.
 command.go::func::ExecuteSetPlaybackSpeed	func	in_progress	src/vhs/evaluator.cr:917	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetShell	func	in_progress	src/vhs/evaluator.cr:818	Implementation present; upstream behavior is not asserted by a spec yet.
 command.go::func::ExecuteSetTheme	func	ported	src/vhs/evaluator.cr:831, spec/vhs/command_spec.cr:57, spec/vhs/evaluator_spec.cr:46	Theme resolution and Set Theme execution are covered for empty input, named themes, JSON themes, suggestion errors, invalid JSON, and unknown themes.
 command.go::func::ExecuteSetTypingSpeed	func	in_progress	src/vhs/evaluator.cr:842	Duration parsing implemented locally; parity with upstream typing-speed handling is unasserted.
 command.go::func::ExecuteSetWaitPattern	func	in_progress	src/vhs/evaluator.cr:1033	Implementation present; regex validation parity is unasserted.
 command.go::func::ExecuteSetWaitTimeout	func	in_progress	src/vhs/evaluator.cr:1046	Implementation present; units and zero-value handling are unasserted.
-command.go::func::ExecuteSetWidth	func	in_progress	src/vhs/evaluator.cr:945	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetWindowBar	func	in_progress	src/vhs/evaluator.cr:995	Implementation present; upstream behavior is not asserted by a spec yet.
-command.go::func::ExecuteSetWindowBarSize	func	in_progress	src/vhs/evaluator.cr:1005	Implementation present; upstream behavior is not asserted by a spec yet.
+command.go::func::ExecuteSetWidth	func	ported	src/vhs/evaluator.cr:906, spec/vhs/evaluator_spec.cr:254	Asserts width 400 reaches options.style and both renderer copies (video/screenshot) via update_style; the e2e tape now renders a 400x200 GIF.
+command.go::func::ExecuteSetWindowBar	func	ported	src/vhs/evaluator.cr:953, spec/vhs/evaluator_spec.cr:254	Asserts the bar style reaches options.style and both renderer copies; the bar image itself is covered by draw_spec.
+command.go::func::ExecuteSetWindowBarSize	func	ported	src/vhs/evaluator.cr:962, spec/vhs/evaluator_spec.cr:254	Asserts the bar size reaches options.style and both renderer copies.
 command.go::func::ExecuteShift	func	partial	src/vhs/evaluator.cr:707, spec/vhs/evaluator_spec.cr:150	Terminal-backed Shift execution covered by evaluator flow, but parity with upstream browser key actions is not fully demonstrated.
 command.go::func::ExecuteShow	func	partial	src/vhs/evaluator.cr:463, spec/vhs/evaluator_spec.cr:69	Show executes in the Hide/Show tape spec; timer/recording interaction is unasserted.
 command.go::func::ExecuteSleep	func	in_progress	src/vhs/evaluator.cr:396	Duration parsing implemented; sleep duration and rounding are not asserted.
@@ -59,24 +59,24 @@ error.go::func::LineNumber	func	ported	src/vhs/error.cr:34, spec/vhs/error_spec.
 error.go::func::Underline	func	ported	src/vhs/error.cr:29, spec/vhs/error_spec.cr:30	Repeats '^' n times in ERROR_STYLE; count, zero-length case, and ANSI wrapping asserted.
 error.go::method::InvalidSyntaxError.Error	method	ported	src/vhs/error.cr:10, spec/vhs/error_spec.cr:12	Crystal spells the Error() method message; returns 'parser: N error(s)' and is asserted for two parser errors.
 error.go::struct::InvalidSyntaxError	struct	ported	src/vhs/error.cr:3, spec/vhs/error_spec.cr:12	Holds []parser.Error as errors; print_errors expands it into per-error gutters plus the summary line. Moved out of evaluator.cr to mirror upstream error.go.
-evaluator.go::func::Evaluate	func	partial	src/vhs/evaluator.cr:1596, src/vhs/evaluator.cr:1604, spec/vhs/evaluator_spec.cr:254	Vhs.evaluate follows upstream's flow (parse -> SET/ENV -> start -> remaining -> stop -> options); gaps: no context.Context (nothing to cancel in Crystal), the SET/OUTPUT/REQUIRE highlight print to `out` is still a TODO, dimension validation is absent, and the render call is not wired (upstream calls v.Render() before returning).
+evaluator.go::func::Evaluate	func	partial	src/vhs/evaluator.cr:1576, src/vhs/evaluator.cr:1584	Now renders through VHS#render like upstream (the e2e tape produces a GIF); remaining gaps: the SET/OUTPUT/REQUIRE highlight print to `out` and upstream's post-command dimension validation.
 evaluator.go::type::EvaluatorOption	type	ported	src/vhs/evaluator.cr:1585, src/vhs/evaluator.cr:1646, spec/vhs/evaluator_spec.cr:254	Alias VHS -> Nil applied after stop, which is upstream's position; specs prove an option runs after the tape's SET commands, can redirect output paths, and that multiple options apply in order.
-ffmpeg.go::func::NewScreenshotFilterComplexBuilder	func	missing	-	auto-generated
-ffmpeg.go::func::NewStreamBuilder	func	missing	-	auto-generated
-ffmpeg.go::func::NewVideoFilterBuilder	func	missing	-	auto-generated
-ffmpeg.go::method::FilterComplexBuilder.Build	method	missing	-	auto-generated
-ffmpeg.go::method::FilterComplexBuilder.WithBorderRadius	method	missing	-	auto-generated
-ffmpeg.go::method::FilterComplexBuilder.WithGIF	method	missing	-	auto-generated
-ffmpeg.go::method::FilterComplexBuilder.WithMarginFill	method	missing	-	auto-generated
-ffmpeg.go::method::FilterComplexBuilder.WithWindowBar	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.Build	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.WithBar	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.WithCorner	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.WithMP4	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.WithMargin	method	missing	-	auto-generated
-ffmpeg.go::method::StreamBuilder.WithWebm	method	missing	-	auto-generated
-ffmpeg.go::struct::FilterComplexBuilder	struct	missing	-	auto-generated
-ffmpeg.go::struct::StreamBuilder	struct	missing	-	auto-generated
+ffmpeg.go::func::NewScreenshotFilterComplexBuilder	func	ported	src/vhs/ffmpeg_builder.cr:108, spec/vhs/ffmpeg_builder_spec.cr:60	Crystal spells it FilterComplexBuilder.new_screenshot; asserted to omit the fps/setpts stages and keep the overlay/scale/pad/fillborders chain.
+ffmpeg.go::func::NewStreamBuilder	func	ported	src/vhs/ffmpeg_builder.cr:187, spec/vhs/ffmpeg_builder_spec.cr:107	Same counter/input/style contract plus term dimensions; margin, bar, corner, and encoder stages are asserted.
+ffmpeg.go::func::NewVideoFilterBuilder	func	ported	src/vhs/ffmpeg_builder.cr:83, spec/vhs/ffmpeg_builder_spec.cr:39	Crystal spells it FilterComplexBuilder.new_video; the full preamble (overlay, scale, fps, setpts, pad, fillborders) is asserted verbatim.
+ffmpeg.go::method::FilterComplexBuilder.Build	method	ported	src/vhs/ffmpeg_builder.cr:170, spec/vhs/ffmpeg_builder_spec.cr:38	Returns -filter_complex plus -map [stage]; asserted for the default stage and after chaining bar/radius/margin/GIF.
+ffmpeg.go::method::FilterComplexBuilder.WithBorderRadius	method	ported	src/vhs/ffmpeg_builder.cr:140, spec/vhs/ffmpeg_builder_spec.cr:69	Adds the loop+alphamerge stage and renames the stage to rounded, matching upstream; asserted in the chained-filter test.
+ffmpeg.go::method::FilterComplexBuilder.WithGIF	method	ported	src/vhs/ffmpeg_builder.cr:162, spec/vhs/ffmpeg_builder_spec.cr:69	Adds split/palettegen/paletteuse and renames the stage to palette; asserted for stage name and filter text.
+ffmpeg.go::method::FilterComplexBuilder.WithMarginFill	method	ported	src/vhs/ffmpeg_builder.cr:150, spec/vhs/ffmpeg_builder_spec.cr:69	Adds the background scale plus centered overlay and renames the stage to withbg; asserted with width/height from the style.
+ffmpeg.go::method::FilterComplexBuilder.WithWindowBar	method	ported	src/vhs/ffmpeg_builder.cr:130, spec/vhs/ffmpeg_builder_spec.cr:69	Adds the looped bar overlay at WindowBarSize and renames the stage to withbar; asserted with the bar stream index.
+ffmpeg.go::method::StreamBuilder.Build	method	ported	src/vhs/ffmpeg_builder.cr:265, spec/vhs/ffmpeg_builder_spec.cr:107	Returns the accumulated argument list, which build_ff_opts appends to; asserted through the format matrix.
+ffmpeg.go::method::StreamBuilder.WithBar	method	ported	src/vhs/ffmpeg_builder.cr:220, spec/vhs/ffmpeg_builder_spec.cr:132	Draws bar.png via the draw.go port and appends it as the next stream; asserted to produce the file and bump bar_stream/counter.
+ffmpeg.go::method::StreamBuilder.WithCorner	method	ported	src/vhs/ffmpeg_builder.cr:234, spec/vhs/ffmpeg_builder_spec.cr:140	Draws mask.png at term height plus the bar when a bar is present, then appends it; the mask dimensions are asserted from the PNG.
+ffmpeg.go::method::StreamBuilder.WithMP4	method	ported	src/vhs/ffmpeg_builder.cr:253, spec/vhs/ffmpeg_builder_spec.cr:160	Adds the libx264/yuv420p/-an/-crf 20 flags; asserted verbatim.
+ffmpeg.go::method::StreamBuilder.WithMargin	method	ported	src/vhs/ffmpeg_builder.cr:198, spec/vhs/ffmpeg_builder_spec.cr:108	Adds a lavfi color stream for hex fills and a looping -loop 1 image stream otherwise, warning when the file is missing; both paths asserted.
+ffmpeg.go::method::StreamBuilder.WithWebm	method	ported	src/vhs/ffmpeg_builder.cr:259, spec/vhs/ffmpeg_builder_spec.cr:164	Adds the yuv420p/-an/-crf 30/-b:v 0 flags; asserted verbatim.
+ffmpeg.go::struct::FilterComplexBuilder	struct	ported	src/vhs/ffmpeg_builder.cr:37, spec/vhs/ffmpeg_builder_spec.cr:38	Same state (filter text, style, term dimensions, previous stage name); stage chaining is asserted end to end.
+ffmpeg.go::struct::StreamBuilder	struct	ported	src/vhs/ffmpeg_builder.cr:176, spec/vhs/ffmpeg_builder_spec.cr:107	Same state (args, counter, style, term dimensions, input, bar/corner/margin stream indexes); all mutating stages are asserted.
 lexer/lexer.go::func::New	func	ported	src/vhs/lexer.cr:14, spec/vhs/lexer_spec.cr:298	Crystal spells it Lexer#initialize; asserted through the upstream TestNextToken table and the existing lexer specs.
 lexer/lexer.go::method::Lexer.NextToken	method	ported	src/vhs/lexer.cr:25, spec/vhs/lexer_spec.cr:298	Token-for-token port of upstream TestNextToken (81 expectations, including the escaped-regex cases) plus the all.tape fixture table (199 expectations).
 lexer/lexer.go::struct::Lexer	struct	ported	src/vhs/lexer.cr:5, spec/vhs/lexer_spec.cr:335	Same input/pos/next_pos/line/column state; the all.tape token stream exercises comments, strings, JSON themes, numbers, units, and key sequences.
@@ -105,7 +105,7 @@ record.go::func::Record	func	missing	src/vhs/record.cr:101	Not ported: the refer
 record_test.go::test::TestInputToTape	test	ported	spec/vhs/record_spec.cr:4	Crystal mirrors the upstream input-to-tape conversion scenarios for control sequences, repeated navigation keys, and compressed command output.
 record_test.go::test::TestInputToTapeLongSleep	test	ported	spec/vhs/record_spec.cr:92	Crystal covers the upstream long-sleep compression case and matches the expected aggregated duration output.
 record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	test	ported	spec/vhs/record_spec.cr:102	Crystal covers the upstream post-exit sleep handling and preserves the expected exit plus aggregated sleep output.
-screenshot.go::func::MakeScreenshots	func	missing	-	Not ported: frame-to-screenshot ffmpeg command building (buildFFopts over StreamBuilder/ScreenshotFilterComplexBuilder) does not exist yet; the per-frame bookkeeping side does.
+screenshot.go::func::MakeScreenshots	func	ported	src/vhs/ffmpeg_renderer.cr:42, spec/vhs/ffmpeg_builder_spec.cr:238	Crystal spells it FFmpegRenderer.screenshot_commands, which builds one ffmpeg invocation per recorded screenshot via build_screenshot_opts (single text/cursor frame inputs plus margin/bar/corner stages); asserted for two deferred screenshots and their frame numbers.
 screenshot.go::func::NewScreenshotOptions	func	ported	src/vhs/evaluator.cr:1311, spec/vhs/screenshot_spec.cr:6	ScreenshotOptions.new(input:, style:) seeds frame_capture=false, empty next path, empty screenshot map; the spec drives it through make_screenshot/enable_frame_capture.
 screenshot.go::struct::ScreenshotOptions	struct	ported	src/vhs/evaluator.cr:1311, spec/vhs/screenshot_spec.cr:6	Same five fields (frame capture flag, next path, screenshots map, input, style); make_screenshot and enable_frame_capture are asserted.
 screenshot_test.go::test::TestScreenshot	test	ported	spec/vhs/screenshot_spec.cr:4	Crystal covers screenshot capture toggling and screenshot frame bookkeeping through ScreenshotOptions.make_screenshot and enable_frame_capture.
@@ -242,9 +242,9 @@ vhs.go::method::VHS.Setup	method	missing	-	Not ported: there is no browser viewp
 vhs.go::method::VHS.Start	method	partial	src/vhs/evaluator.cr:1818	Crystal starts a TerminalEmulator, ensures the input directory, and starts frame capture; it has no ttyd, browser launch, or rod page, which is the architectural divergence of the headless port.
 vhs.go::struct::Options	struct	ported	src/vhs/evaluator.cr:1469, spec/vhs_spec.cr:4	Same 15 option fields (shell..style) with upstream types; defaults are asserted through default_vhs_options. Divergence: the bare struct default uses /^$/ for wait_pattern where Go's zero value is a nil regexp.
 vhs.go::struct::VHS	struct	partial	src/vhs/evaluator.cr:1792	Same options/errors/started/recording/total_frames state, but the port has a TerminalEmulator, mutex, and frame-capture fiber instead of Page/browser/TextCanvas/CursorCanvas/tty.
-video.go::func::DefaultVideoOptions	func	missing	-	auto-generated
-video.go::func::MakeGIF	func	missing	-	auto-generated
-video.go::func::MakeMP4	func	missing	-	auto-generated
-video.go::func::MakeWebM	func	missing	-	auto-generated
-video.go::struct::VideoOptions	struct	missing	-	auto-generated
-video.go::struct::VideoOutputs	struct	missing	-	auto-generated
+video.go::func::DefaultVideoOptions	func	ported	src/vhs/evaluator.cr:1500, spec/vhs_spec.cr:39	Same defaults (framerate 50, starting frame 1, max colors 256, playback speed 1.0, empty outputs, random input dir) asserted in spec/vhs_spec.cr.
+video.go::func::MakeGIF	func	ported	src/vhs/ffmpeg_builder.cr:344, spec/vhs/ffmpeg_builder_spec.cr:218	Returns the ffmpeg args for the GIF output (palette filter) or nil when unset; the renderer spawns the process, so the return type is args rather than exec.Cmd.
+video.go::func::MakeMP4	func	ported	src/vhs/ffmpeg_builder.cr:349, spec/vhs/ffmpeg_builder_spec.cr:218	Returns the mp4 args with the libx264 flags, or nil when unset.
+video.go::func::MakeWebM	func	ported	src/vhs/ffmpeg_builder.cr:354, spec/vhs/ffmpeg_builder_spec.cr:218	Returns the webm args with the -b:v 0 flags, or nil when unset.
+video.go::struct::VideoOptions	struct	ported	src/vhs/evaluator.cr:1469, spec/vhs_spec.cr:39	Same seven fields (framerate, playback speed, input, max colors, output, starting frame, style); defaults and style plumbing asserted.
+video.go::struct::VideoOutputs	struct	ported	src/vhs/evaluator.cr:1455, spec/vhs_spec.cr:39	Same four output paths (gif, webm, mp4, frames), all asserted empty by default.

@@ -120,7 +120,7 @@ module Vhs
 
       it "prints parser output for a tape that fails to parse" do
         tape = "Bogus 3\n"
-        errors = Vhs.evaluate(tape)
+        errors = evaluate_without_render(tape)
         errors.size.should eq(1)
         errors.first.should be_a(InvalidSyntaxError)
 

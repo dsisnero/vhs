@@ -495,34 +495,9 @@ module Vhs
       return Exception.new("Screenshot path is required")
     end
 
-    term = v.terminal
-    if term.nil?
-      return Exception.new("Terminal not started")
-    end
-
-    buffer = term.buffer
-    if buffer.empty?
-      # Empty buffer, still create PNG with background
-      buffer = Array.new(term.height) { Array.new(term.width, ' ') }
-    end
-
-    # Get font settings from options
-    opts = v.options
-    foreground = opts.theme.foreground
-    background = opts.theme.background
-
-    # Render PNG
-    ::Vhs::PNGRenderer.render(buffer, path,
-      font_family: opts.font_family,
-      font_size: opts.font_size,
-      letter_spacing: opts.letter_spacing,
-      line_height: opts.line_height,
-      foreground: foreground,
-      background: background
-    )
-
-    # Increment frame count (for recording loop)
-    v.total_frames += 1
+    # Upstream ExecuteScreenshot only arms the next frame capture; the styled
+    # PNG is produced later by the ffmpeg screenshot pass.
+    v.options.screenshot.enable_frame_capture(path)
     nil
   end
 
@@ -869,11 +844,10 @@ module Vhs
     if height.nil? || height <= 0
       return Exception.new("invalid height: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.height = height
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.height = height
+      style
+    end
     nil
   end
 
@@ -921,11 +895,10 @@ module Vhs
     if padding.nil? || padding < 0
       return Exception.new("invalid padding: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.padding = padding
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.padding = padding
+      style
+    end
     nil
   end
 
@@ -935,11 +908,10 @@ module Vhs
     if width.nil? || width <= 0
       return Exception.new("invalid width: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.width = width
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.width = width
+      style
+    end
     nil
   end
 
@@ -957,11 +929,10 @@ module Vhs
 
   # ExecuteSetMarginFill applies the margin fill on the vhs.
   def self.execute_set_margin_fill(cmd : Parser::Command, v : VHS) : Exception?
-    opts = v.options.dup
-    style = opts.style.dup
-    style.margin_fill = cmd.args
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.margin_fill = cmd.args
+      style
+    end
     nil
   end
 
@@ -971,21 +942,19 @@ module Vhs
     if margin.nil? || margin < 0
       return Exception.new("invalid margin: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.margin = margin
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.margin = margin
+      style
+    end
     nil
   end
 
   # ExecuteSetWindowBar applies the window bar on the vhs.
   def self.execute_set_window_bar(cmd : Parser::Command, v : VHS) : Exception?
-    opts = v.options.dup
-    style = opts.style.dup
-    style.window_bar = cmd.args
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.window_bar = cmd.args
+      style
+    end
     nil
   end
 
@@ -995,11 +964,10 @@ module Vhs
     if window_bar_size.nil? || window_bar_size < 0
       return Exception.new("invalid window bar size: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.window_bar_size = window_bar_size
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.window_bar_size = window_bar_size
+      style
+    end
     nil
   end
 
@@ -1009,11 +977,10 @@ module Vhs
     if border_radius.nil? || border_radius < 0
       return Exception.new("invalid border radius: #{cmd.args}")
     end
-    opts = v.options.dup
-    style = opts.style.dup
-    style.border_radius = border_radius
-    opts.style = style
-    v.options = opts
+    update_style(v) do |style|
+      style.border_radius = border_radius
+      style
+    end
     nil
   end
 
@@ -1576,6 +1543,19 @@ module Vhs
     end
   end
 
+  # update_style applies a change to the style the terminal uses *and* to the
+  # copies the video and screenshot renderers hold. Upstream shares one
+  # *StyleOptions across all three; Crystal structs copy on assignment, so every
+  # SET command that touches the style has to write all three.
+  private def self.update_style(v : VHS, & : StyleOptions -> StyleOptions) : Nil
+    style = yield v.options.style
+    opts = v.options
+    opts.style = style
+    opts.video.style = style
+    opts.screenshot.style = style
+    v.options = opts
+  end
+
   private def self.double(n : Int32) : Int32
     n * 2
   end
@@ -1645,7 +1625,11 @@ module Vhs
     # tape's final options and can still redirect the outputs.
     opts.each(&.call(v))
 
-    # TODO: Render output
+    # Render the video outputs and any deferred screenshots.
+    if err = v.render
+      return [err] of Exception
+    end
+
     v.errors
   end
 
@@ -1904,7 +1888,7 @@ module Vhs
       @frame_capture_fiber = nil
     end
 
-    # Capture a single frame and save as PNG
+    # Captures one frame as the text and cursor layers ffmpeg overlays.
     private def capture_frame : Nil
       term = @terminal
       return unless term
@@ -1913,27 +1897,35 @@ module Vhs
       buffer = term.buffer
       return if buffer.empty?
 
-      # Generate frame filename
-      frame_num = @total_frames + 1
-      filename = sprintf("frame_%04d.png", frame_num)
-      path = File.join(@options.video.input, filename)
-
-      # Get font settings from options
       opts = @options
-      foreground = opts.theme.foreground
-      background = opts.theme.background
+      frame_num = @total_frames + 1
+      text_path = File.join(opts.video.input, sprintf(TEXT_FRAME_FORMAT, frame_num))
+      cursor_path = File.join(opts.video.input, sprintf(CURSOR_FRAME_FORMAT, frame_num))
 
-      # Render PNG
-      ::Vhs::PNGRenderer.render(buffer, path,
+      ::Vhs::PNGRenderer.render(buffer, text_path,
         font_family: opts.font_family,
         font_size: opts.font_size,
         letter_spacing: opts.letter_spacing,
         line_height: opts.line_height,
-        foreground: foreground,
-        background: background
+        foreground: opts.theme.foreground,
+        background: opts.theme.background
+      )
+
+      ::Vhs::PNGRenderer.render_cursor(buffer, cursor_path,
+        cursor_x: term.cursor_x,
+        cursor_y: term.cursor_y,
+        font_family: opts.font_family,
+        font_size: opts.font_size,
+        letter_spacing: opts.letter_spacing,
+        line_height: opts.line_height,
+        cursor_color: opts.theme.cursor
       )
 
       @total_frames += 1
+
+      # Capture the current frame and disable frame capturing, like upstream
+      # Record does after writing both layers.
+      opts.screenshot.make_screenshot(@total_frames) if opts.screenshot.frame_capture?
     end
 
     # Close stops recording and cleans up resources

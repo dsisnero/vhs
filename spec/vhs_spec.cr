@@ -36,6 +36,23 @@ describe Vhs do
     end
   end
 
+  describe ".default_video_options" do
+    it "matches upstream DefaultVideoOptions" do
+      video = Vhs.default_video_options
+
+      video.framerate.should eq(50)
+      video.playback_speed.should eq(1.0)
+      video.max_colors.should eq(256)
+      video.starting_frame.should eq(1)
+      video.input.should_not be_empty
+      video.output.gif.should eq("")
+      video.output.mp4.should eq("")
+      video.output.webm.should eq("")
+      video.output.frames.should eq("")
+      video.style.width.should eq(Vhs::DEFAULT_WIDTH)
+    end
+  end
+
   describe "VHS.new" do
     it "seeds the instance with the default options" do
       vhs = Vhs::VHS.new

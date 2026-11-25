@@ -8,7 +8,7 @@ module Vhs
       Sleep 0.1s
       TAPE
 
-      errors = Vhs.evaluate(tape)
+      errors = evaluate_without_render(tape)
       puts "Errors: #{errors.inspect}"
       errors.should be_empty
     end
