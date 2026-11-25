@@ -66,15 +66,20 @@ are*, not *how the repo works*.
     `ported`, 14 `partial`, 23 `in_progress`, 1 `intentional_divergence`. Only
     Set Theme has upstream-asserted behavior; the rest record implementation
     presence and name the missing assertions.
+  - Styles: `src/vhs/styles.cr` ports `style.go`'s lipgloss style set
+    (Command/Faint/None/Keyword/URL/Number/String/Time/LineNumber/Error/Gray/
+    ErrorFile) through the dsisnero/lipgloss shard, with a termenv-style profile
+    detector (`NO_COLOR`, `COLORTERM`, `TERM`) applied by the CLI. The command
+    echo and error printing render through those styles, so the escapes and
+    padding come from the same model as upstream instead of hand-written codes.
   - Style / theme colors: all 21 `style.go` rows reconciled — 20 `ported`
     (19 hex constants + `DefaultStyleOptions`, pinned by
     `spec/vhs/style_spec.cr`), 1 `partial` (`StyleOptions`: fields match
     upstream, but a bare `StyleOptions.new` defaults to the
     `DefaultStyleOptions` numbers where a Go zero value is `0`/`""`). The
     file's lipgloss style vars (`CommandStyle`, `ErrorStyle`, `ErrorFileStyle`,
-    `LineNumberStyle`, …) are not in the ledger's kind vocabulary and are not
-    ported as styles: `ErrorStyle`/`LineNumberStyle` became the ANSI constants in
-    `src/vhs/error.cr`, and the rest still land with `syntax.go`/`highlight`.
+    `LineNumberStyle`, …) are not in the ledger's kind vocabulary; they are
+    ported in `src/vhs/styles.cr` and asserted in `spec/vhs/styles_spec.cr`.
   - Renderers: complete for the port's architecture. `draw.go` lives in
     `src/vhs/draw.cr` (pixel-level specs), the ffmpeg builders and command
     assembly in `src/vhs/ffmpeg_builder.cr` (argument-level specs for every
@@ -151,7 +156,7 @@ are*, not *how the repo works*.
 - **Ledger: fully reconciled.** 248 rows: 238 `ported`, 10
   `intentional_divergence`, nothing `partial`/`missing`/`in_progress`. All 17
   upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (37 files); `make test` `223 examples, 0
+- **Gates:** `make lint` pass (39 files); `make test` `232 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 238 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 10
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
@@ -227,20 +232,15 @@ Keep this block accurate after every feature: the next session reads it first
   `FrameCapture` field; behavior is identical.
 - `InvalidSyntaxError#message`: Crystal spells Go's `Error()` method `message`,
   returning the same `parser: N error(s)` string.
-- Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
-  the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
-  color profile with the terminal, so the bytes differ only in escape sequence.
 - `vhs record` is not ported: upstream drives raw stdin through a PTY, and
   Crystal's standard library has no PTY allocator. `Vhs::Record.input_to_tape`
   (the recorder's pure core) is ported and covered by the three upstream tests.
 - `vhs publish` is not ported: upstream uploads over SSH to `ghost.charm.sh`
   using keygen, go-app-paths, and known_hosts, all of which would be a new native
   dependency; the CLI reports publishing as unavailable.
-- `Highlight` has no lipgloss: each upstream style becomes the 16-color ANSI code
-  it resolves to, and `NoneStyle`/`KeywordStyle` (which have no attributes)
-  become empty strings. `number?`/`time?` keep upstream's regexes, including
-  `^[0-9]+m?s$` not matching a bare `1m`, and the source path is measured in
-  characters instead of go-runewidth's display cells.
+- `Highlight.number?`/`time?` keep upstream's regexes (so a bare `1m` is not a
+  time), and the elided source path is measured in characters where upstream
+  uses go-runewidth's display cells.
 - `Output frames/`: upstream renames the temp frame directory to the raw
   argument (trailing slash), which fails silently, and the rename also fails
   across filesystems because the frame input lives in the system temp dir. The

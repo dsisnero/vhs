@@ -205,7 +205,7 @@ module Vhs
         ])
       else
         unless File.exists?(style.margin_fill)
-          STDERR.puts "#{ERROR_STYLE}Unable to read margin file: #{STYLE_RESET} #{style.margin_fill}"
+          STDERR.puts "#{Styles::ERROR_STYLE.render("Unable to read margin file: ")}#{style.margin_fill}"
         end
 
         args.concat(["-loop", "1", "-i", style.margin_fill])

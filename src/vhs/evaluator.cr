@@ -1499,9 +1499,12 @@ module Vhs
       cmds[offset..].each do |cmd|
         is_setting = cmd.type == Token::SET && cmd.options != "TypingSpeed"
         if is_setting
-          STDERR.puts "#{ERROR_STYLE}WARN: 'Set #{cmd.options} #{cmd.args}' has been ignored. " \
-                      "Move the directive to the top of the file.\n" \
-                      "Learn more: https://github.com/charmbracelet/vhs#settings#{STYLE_RESET}"
+          # Upstream prints this warning to stdout, not stderr.
+          puts Styles::ERROR_STYLE.render(
+            "WARN: 'Set #{cmd.options} #{cmd.args}' has been ignored. " \
+            "Move the directive to the top of the file.\n" \
+            "Learn more: https://github.com/charmbracelet/vhs#settings"
+          )
         end
         if is_setting || cmd.type == Token::REQUIRE
           output.puts Highlight.highlight(cmd, true)

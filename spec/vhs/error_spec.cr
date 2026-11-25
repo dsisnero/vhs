@@ -33,7 +33,7 @@ module Vhs
       end
 
       it "renders the caret run in the error style" do
-        Vhs.underline(3).should eq("#{ERROR_STYLE}^^^#{STYLE_RESET}")
+        Vhs.underline(3).should eq(Vhs::Styles::ERROR_STYLE.render("^^^"))
       end
 
       it "is empty for zero length" do
@@ -49,7 +49,7 @@ module Vhs
       end
 
       it "renders the gutter in the line number style" do
-        Vhs.line_number(7).should eq("#{LINE_NUMBER_STYLE}  7 │ #{STYLE_RESET}")
+        Vhs.line_number(7).should eq(Vhs::Styles::LINE_NUMBER_STYLE.render("  7 │ "))
       end
     end
 
@@ -115,7 +115,7 @@ module Vhs
         Vhs.print_errors(io, "", [IO::Error.new("disk on fire")] of Exception)
 
         strip_ansi(io.to_s).should eq("disk on fire\n")
-        io.to_s.should eq("#{ERROR_STYLE}disk on fire#{STYLE_RESET}\n")
+        io.to_s.should eq("#{Vhs::Styles::ERROR_STYLE.render("disk on fire")}\n")
       end
 
       it "prints parser output for a tape that fails to parse" do

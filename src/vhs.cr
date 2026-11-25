@@ -15,6 +15,10 @@ module Vhs::CLI
   extend self
 
   def run(args = ARGV)
+    # Match lipgloss' terminal negotiation (NO_COLOR, COLORTERM, TERM) so the
+    # echo and error output carry the colour depth the terminal can show.
+    Styles.configure
+
     input = ""
     input_file = ""
     quiet = false

@@ -16,23 +16,15 @@ module Vhs
   # the left to account for the line number.
   ERROR_COLUMN_OFFSET = 5
 
-  # Upstream renders error text through lipgloss styles: `ErrorStyle` is color
-  # "1", `LineNumberStyle` is color "8". lipgloss negotiates a color profile with
-  # the terminal at runtime, so the port emits the 16-color ANSI codes those
-  # styles resolve to on a color terminal.
-  ERROR_STYLE       = "\e[31m"
-  LINE_NUMBER_STYLE = "\e[90m"
-  STYLE_RESET       = "\e[0m"
-
   # Underline returns a string of ^ characters which helps underline the
   # problematic token in a parser error.
   def self.underline(n : Int32) : String
-    "#{ERROR_STYLE}#{"^" * n}#{STYLE_RESET}"
+    Styles::ERROR_STYLE.render("^" * n)
   end
 
   # LineNumber returns a formatted version of the given line number.
   def self.line_number(line : Int32) : String
-    "#{LINE_NUMBER_STYLE} #{sprintf("%2d", line)} │ #{STYLE_RESET}"
+    Styles::LINE_NUMBER_STYLE.render(" #{sprintf("%2d", line)} │ ")
   end
 
   # print_error prints a parser error with the offending tape line, a line number
@@ -55,7 +47,7 @@ module Vhs
       if err.is_a?(InvalidSyntaxError)
         err.errors.each { |parser_err| print_error(io, tape, parser_err) }
       end
-      io.puts "#{ERROR_STYLE}#{err.message}#{STYLE_RESET}"
+      io.puts Styles::ERROR_STYLE.render(err.message.to_s)
     end
   end
 

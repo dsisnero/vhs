@@ -1,23 +1,13 @@
 module Vhs
   # Syntax highlighting for the command echo, ported from upstream syntax.go.
   #
-  # Upstream renders these through lipgloss styles; the port emits the 16-color
-  # ANSI codes those styles resolve to, and an empty string where the style has
-  # no attributes (NoneStyle, KeywordStyle).
+  # Styles come from src/vhs/styles.cr, which uses the same lipgloss model as
+  # upstream syntax.go (NoneStyle and KeywordStyle carry no attributes).
   module Highlight
     extend self
 
     # How many characters of a sourced tape path are shown before it is elided.
     SOURCE_DISPLAY_MAX_LENGTH = 10
-
-    COMMAND_STYLE = "\e[94m" # lipgloss.Color("12")
-    FAINT_STYLE   = "\e[2m"  # lipgloss AdaptiveColor{Light: "242", Dark: "238"}
-    NUMBER_STYLE  = "\e[33m" # lipgloss.Color("3")
-    STRING_STYLE  = "\e[92m" # lipgloss.Color("10")
-    TIME_STYLE    = "\e[93m" # lipgloss.Color("11")
-    GRAY_STYLE    = "\e[90m" # lipgloss.Color("8")
-    NONE_STYLE    = ""
-    KEYWORD_STYLE = ""
 
     NUMBER_REGEX = /^[0-9]+$/
     TIME_REGEX   = /^[0-9]+m?s$/
@@ -33,13 +23,13 @@ module Vhs
     # Highlights a command for prettier printing. `faint` dims hidden commands.
     def highlight(c : Parser::Command, faint : Bool) : String
       return faint_command(c) if faint
-      return paint(FAINT_STYLE, type_name(c)) if c.type == Token::HIDE || c.type == Token::SHOW
+      return paint(Styles::FAINT_STYLE, type_name(c)) if c.type == Token::HIDE || c.type == Token::SHOW
 
       options_style, args_style = styles_for(c)
 
       rendered = String::Builder.new
       rendered << source_prefix(c)
-      rendered << paint(COMMAND_STYLE, type_name(c)) << " "
+      rendered << paint(Styles::COMMAND_STYLE, type_name(c)) << " "
       unless c.options.empty?
         rendered << paint(options_style, c.options)
         rendered << (c.type == Token::ENV ? "=" : " ")
@@ -54,33 +44,33 @@ module Vhs
                 else
                   "#{type_name(c)} #{c.options} #{c.args}"
                 end
-      "#{source_prefix(c)}#{FAINT_STYLE}#{command}#{STYLE_RESET}"
+      "#{source_prefix(c)}#{Styles::FAINT_STYLE.render(command)}"
     end
 
-    private def styles_for(c : Parser::Command) : {String, String}
+    private def styles_for(c : Parser::Command) : {Lipgloss::Style, Lipgloss::Style}
       case c.type
       when Token::REGEX
-        {TIME_STYLE, STRING_STYLE}
+        {Styles::TIME_STYLE, Styles::STRING_STYLE}
       when Token::SET
-        {KEYWORD_STYLE, set_arg_style(c.args)}
+        {Styles::KEYWORD_STYLE, set_arg_style(c.args)}
       when Token::ENV, Token::OUTPUT
-        {NONE_STYLE, STRING_STYLE}
+        {Styles::NONE_STYLE, Styles::STRING_STYLE}
       when Token::CTRL
-        {TIME_STYLE, COMMAND_STYLE}
+        {Styles::TIME_STYLE, Styles::COMMAND_STYLE}
       when Token::SLEEP
-        {TIME_STYLE, TIME_STYLE}
+        {Styles::TIME_STYLE, Styles::TIME_STYLE}
       when Token::TYPE
-        {TIME_STYLE, STRING_STYLE}
+        {Styles::TIME_STYLE, Styles::STRING_STYLE}
       else
-        {TIME_STYLE, NUMBER_STYLE}
+        {Styles::TIME_STYLE, Styles::NUMBER_STYLE}
       end
     end
 
-    private def set_arg_style(args : String) : String
-      return NUMBER_STYLE if number?(args)
-      return TIME_STYLE if time?(args)
+    private def set_arg_style(args : String) : Lipgloss::Style
+      return Styles::NUMBER_STYLE if number?(args)
+      return Styles::TIME_STYLE if time?(args)
 
-      STRING_STYLE
+      Styles::STRING_STYLE
     end
 
     # Upstream's CommandType.String: the token name through ToCamel.
@@ -92,13 +82,11 @@ module Vhs
       return "" if c.source.empty?
 
       display_path = truncate(trim_extension(c.source), SOURCE_DISPLAY_MAX_LENGTH)
-      "#{GRAY_STYLE}#{display_path}:#{STYLE_RESET} "
+      "#{Styles::GRAY_STYLE.render("#{display_path}:")} "
     end
 
-    private def paint(style : String, text : String) : String
-      return text if style.empty?
-
-      "#{style}#{text}#{STYLE_RESET}"
+    private def paint(style : Lipgloss::Style, text : String) : String
+      style.render(text)
     end
 
     private def trim_extension(path : String) : String

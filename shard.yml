@@ -9,6 +9,9 @@ targets:
     main: src/vhs.cr
 
 dependencies:
+  lipgloss:
+    github: dsisnero/lipgloss
+    branch: main
   similar:
     github: dsisnero/similar.cr
   term2:

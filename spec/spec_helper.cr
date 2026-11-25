@@ -18,3 +18,7 @@ end
 def evaluate_without_render(tape : String, output : IO = IO::Memory.new) : Array(Exception)
   Vhs.evaluate(tape, output, drop_outputs_option)
 end
+
+# Pin the colour profile so style output is byte-stable: the ANSI palette is what
+# these terminals render, and it keeps the escape sequences in specs readable.
+Lipgloss::StyleRenderer.default.color_profile = Lipgloss::ColorProfile::ANSI

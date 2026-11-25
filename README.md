@@ -62,7 +62,10 @@ for all available commands.
 The port renders frames headlessly: a terminal emulator replaces `ttyd` and the
 Rod browser, and each frame is drawn as a text layer plus a cursor layer, which
 ffmpeg overlays with the same filter chain Go VHS uses (window bar, border
-radius, margin fill, palette for GIF).
+radius, margin fill, palette for GIF). Echoed commands and error output go
+through the same lipgloss styles as upstream (`src/vhs/styles.cr`), so the
+colours follow the terminal's detected colour profile (`NO_COLOR`, `COLORTERM`,
+`TERM`).
 
 Two CLI surfaces are intentionally not implemented:
 
