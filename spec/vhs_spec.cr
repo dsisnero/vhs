@@ -95,6 +95,12 @@ describe Vhs do
     end
   end
 
+  describe ".default_test_options" do
+    it "matches upstream DefaultTestOptions" do
+      Vhs.default_test_options.output.should eq("out.test")
+    end
+  end
+
   describe "TestOptions" do
     it "matches the Go zero value used by DefaultVHSOptions" do
       Vhs::TestOptions.new.output.should eq("")

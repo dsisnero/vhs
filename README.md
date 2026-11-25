@@ -57,6 +57,21 @@ This generates `demo.gif` with the terminal session.
 See the [VHS Command Reference](vendor/vhs/README.md#vhs-command-reference)
 for all available commands.
 
+### Differences from Go VHS
+
+The port renders frames headlessly: a terminal emulator replaces `ttyd` and the
+Rod browser, and each frame is drawn as a text layer plus a cursor layer, which
+ffmpeg overlays with the same filter chain Go VHS uses (window bar, border
+radius, margin fill, palette for GIF).
+
+Two CLI surfaces are intentionally not implemented:
+
+* `vhs record` needs a PTY and raw-terminal handling that Crystal's standard
+  library does not provide. The tape-conversion core (`Vhs::Record.input_to_tape`)
+  is ported and tested.
+* `vhs publish` uploads the GIF over SSH to `ghost.charm.sh`, which would require
+  an SSH client dependency. The CLI reports publishing as unavailable.
+
 ## Development
 
 This project follows the Go vhs implementation closely. The Go source lives

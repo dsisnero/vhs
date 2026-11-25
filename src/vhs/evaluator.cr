@@ -1315,6 +1315,13 @@ module Vhs
     end
   end
 
+  # DefaultTestOptions returns the default set of options for the testing
+  # functionality. Nothing calls it upstream either (DefaultVHSOptions uses the
+  # zero value), but it is part of the package surface.
+  def self.default_test_options : TestOptions
+    TestOptions.new(output: "out.test")
+  end
+
   # Shell is a type that contains a prompt and the command to set up the shell.
   struct Shell
     property command : Array(String)

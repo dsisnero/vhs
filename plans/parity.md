@@ -8,19 +8,19 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the evaluator is functionally complete for the port's
-  architecture — it echoes highlighted commands, warns about ignored
-  mid-tape `Set`s, validates dimensions, renders, and tears down. Only **3 rows**
-  are still `missing`, all CLI-only: `publish.go::Publish`,
-  `record.go::Record`, `testing.go::DefaultTestOptions`.
+- **Current focus:** the ledger has **no `missing` rows left**. Everything in
+  the pinned Go tree is now `ported`, `partial`, `in_progress`, or a documented
+  `intentional_divergence`. The three former CLI gaps resolved as: `Highlight`
+  ported, `DefaultTestOptions` ported, and `record.go::Record` /
+  `publish.go::Publish` recorded as intentional divergences (PTY requirement and
+  SSH-client requirement respectively).
 - **Next up:**
-  1. Port the `vhs test` command surface (`testing.go::DefaultTestOptions` plus
-     the `test` subcommand that compares `TestOptions.Output` against
-     `TestOptions.Golden`).
-  2. Port `record.go`'s recorder entry point (the `vhs record` command) and
-     `publish.go` (Charm publish).
-  3. Port `serve.go`/`tty.go`/`man.go` — add them to the ledger with the CLI
-     phase, since their symbols are not in the current regex discovery.
+  1. Close the remaining `partial` rows (24) by asserting the behavior they name
+     — `partial` is now the real backlog, alongside `in_progress`.
+  2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
+     reviewed discovery/manifest change with the CLI phase).
+  3. Consider the tree-sitter ID migration (378 items) as its own reviewed
+     branch once the curated ledger is fully green.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -84,8 +84,10 @@ are*, not *how the repo works*.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
-  - CLI, publish, syntax, testing, serve, tty, man, record entry point: not
-    ported.
+  - CLI: file + flags (`-o`, `-q`, `-p`, `-v`, `-h`, stdin) are ported;
+    `vhs record` and `vhs publish` are documented intentional divergences
+    (README "Differences from Go VHS"). `serve`/`tty`/`man` are not ported and
+    not yet in the ledger.
 - **Scoping notes / gotchas:**
   - The ledger is a **regex** ledger. `PARITY_PARSER=tree-sitter` works here
     (toolchain `v0.3.4` is installed) but discovers 378 Go items instead of 248
@@ -123,12 +125,11 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `046b50d` port: port ApplyLoopOffset and Cleanup, wire the
   evaluate teardown (working tree clean at that commit).
-- **Ledger `missing` rows left (3), all CLI-only:** `publish.go::Publish`,
-  `record.go::Record`, `testing.go::DefaultTestOptions`. No test IDs are
-  `missing` any more.
-- **Gates:** `make lint` pass (31 files); `make test` `178 examples, 0
+- **Ledger `missing` rows left: none.** 248 rows: 202 `ported`, 24 `partial`,
+  15 `in_progress`, 7 `intentional_divergence`. No test IDs are `missing`.
+- **Gates:** `make lint` pass (31 files); `make test` `179 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 201 `ported`, 24 `partial`, 15 `in_progress`, 3 `missing`, 5
+  rows: 202 `ported`, 24 `partial`, 15 `in_progress`, 0 `missing`, 7
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -185,8 +186,9 @@ Keep this block accurate after every feature: the next session reads it first
 ## Phase 4 — CLI surfaces
 
 - [x] `syntax.go` (`Highlight` + the evaluator's echo/warn/dimension checks)
-- [ ] `testing.go` (`vhs test` + `DefaultTestOptions`)
-- [ ] `publish.go` (Charm publish path)
+- [x] `testing.go::DefaultTestOptions` (no `vhs test` command exists upstream)
+- [x] `record.go` / `publish.go` recorded as intentional divergences and
+      documented in the README
 - [ ] `serve.go` / `tty.go` (server + tty handling, `serve_unix.go` first)
 - [ ] `man.go`
 - [ ] Evaluate `token/token.go` native tree-sitter migration as a separate
@@ -204,6 +206,12 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `vhs record` is not ported: upstream drives raw stdin through a PTY, and
+  Crystal's standard library has no PTY allocator. `Vhs::Record.input_to_tape`
+  (the recorder's pure core) is ported and covered by the three upstream tests.
+- `vhs publish` is not ported: upstream uploads over SSH to `ghost.charm.sh`
+  using keygen, go-app-paths, and known_hosts, all of which would be a new native
+  dependency; the CLI reports publishing as unavailable.
 - `Highlight` has no lipgloss: each upstream style becomes the 16-color ANSI code
   it resolves to, and `NoneStyle`/`KeywordStyle` (which have no attributes)
   become empty strings. `number?`/`time?` keep upstream's regexes, including
