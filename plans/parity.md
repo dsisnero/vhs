@@ -20,9 +20,15 @@ are*, not *how the repo works*.
   the previous TODO no-op. Ledger: 245 `ported`, 3 `intentional_divergence`,
   0 `missing`.
 - **Next up:**
-  1. Port `serve.go`/`man.go` (and the ledger for them): their symbols are not in
-     the regex discovery's kind vocabulary, so this needs a reviewed discovery or
-     manifest change first.
+  1. Decide `serve.go`: it needs an SSH *server*, and the only Crystal options are
+     `ralsina/shirk` (libssh binding, one star, ~20 commits, native libssh
+     required; its high-level `on_exec` collects all stdin before the handler,
+     which happens to fit upstream's `io.Copy(&b, s)` flow) and
+     `bararchy/crystal_ssh` (libssh bindings, unmaintained since 2016). Taking
+     either is a dependency-posture change for a surface only vhs.charm.sh's
+     hosted service uses, so it is an intentional divergence until that is
+     reviewed. Neither `serve` nor `man` can be ledger rows: the regex discovery
+     only tracks exported Go identifiers and both files have none.
   2. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
   3. Rebase the parity ledger when the `vendor/vhs` pin moves (see
@@ -128,7 +134,7 @@ are*, not *how the repo works*.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
-  - CLI: every subcommand except `serve`/`man` is ported — the root command
+  - CLI: every subcommand except `serve` is ported — the root command
     (`-o`, `-q`, `-p`, `-v`, `-h`, file/stdin), `record` (`-s/--shell`),
     `publish` (`-q`), `new`, `themes` (`--markdown`), and `validate` — dispatched
     on `args.first?` instead of through cobra. `-o` applies the outputs through
@@ -137,7 +143,11 @@ are*, not *how the repo works*.
     the output renamed, `themes` lists `sorted_theme_names` one per line (or a
     markdown list) on stderr like upstream's `log.Printf`, and `validate` parses
     without running, skipping unreadable files and reporting through
-    `print_error`. `serve`/`tty`/`man` are not ported and not yet in the ledger.
+    `print_error`. `man` writes the same roff page mango-cobra produces
+    (`spec/fixtures/vhs.1` is upstream's own output with the `help` and `serve`
+    entries removed) and prints upstream's markdown manual unstyled on a
+    terminal, since the port has no glamour. `serve` is not ported (see next
+    up); nothing in `serve.go`, `man.go`, or `tty.go` can be a ledger row.
   - Recorder: `Vhs.record` starts the shell on a pty and prints the tape. The
     shell gets upstream's session and controlling terminal — `setsid` +
     `TIOCSCTTY` + the inherited window size — from the `vhs-record-shell`
@@ -211,7 +221,7 @@ are*, not *how the repo works*.
   browser-runtime migration (working tree clean at that commit).
 - **Ledger:** 248 rows: 245 `ported`, 3 `intentional_divergence`, 0 `missing`.
   All 17 upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (48 files); `make test` `271 examples, 0
+- **Gates:** `make lint` pass (50 files); `make test` `278 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 245 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 3
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
@@ -319,6 +329,17 @@ Keep this block accurate after every feature: the next session reads it first
 - `LibC.ioctl` is declared variadic in `src/vhs/pty.cr`: with a fixed prototype
   the arm64 macOS ABI passes the argument pointer where `va_arg` never looks, so
   every terminal-size request silently succeeded without changing anything.
+- `vhs serve` is not ported. Upstream runs an SSH server (charmbracelet/wish)
+  that streams a tape's GIF back over the session; Crystal has no SSH server in
+  std, and the available bindings are a native-libssh dependency from an
+  experimental shard. `src/vhs/pty.cr`-style hand-rolling is not on the table for
+  SSH, so this is recorded as a divergence rather than pending work. Nothing else
+  in the CLI depends on it.
+- `vhs man` differs in three ways, all because the port has no cobra/mango/glamour:
+  the page is written by `src/vhs/man.cr` to mango's exact output (`vhs help`'s
+  and `vhs serve`'s COMMANDS entries are absent, since those commands do not
+  exist here), and the terminal branch prints the markdown manual without
+  glamour's styling. `spec/fixtures/vhs.1` pins the roff byte for byte.
 - `Vhs.publish` shells out to the system `ssh`/`ssh-keygen` instead of linking
   libssh2. Same key file, `known_hosts`, host-key policy, and GIF-on-stdin
   exchange; `-F /dev/null` stands in for upstream's config-less SSH client.

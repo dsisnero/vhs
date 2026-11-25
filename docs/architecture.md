@@ -36,6 +36,9 @@ Current port status, area-by-area progress, and the ordered backlog live in
   `themes`, and `validate` subcommands that upstream main.go registers with
   cobra. `src/vhs/commands.cr` holds the package-level helpers behind `new`,
   `themes`, and `validate`.
+- `src/vhs/man.cr` renders `vhs man` (upstream's `man.go`): the manual's section
+  bodies and a roff page in mango-cobra's shape, pinned by
+  `spec/fixtures/vhs.1`.
 - `src/vhs/assets/` holds the two files upstream embeds with `//go:embed`
   (`themes.json` and `examples/demo.tape`), baked at compile time by
   `src/vhs/assets.cr` through `baked_file_system`, so a shard install or a

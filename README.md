@@ -72,7 +72,8 @@ Runtime requirements therefore match upstream: a Chromium-family browser and
 `ttyd` on `PATH`. Browser-backed specs are opt-in with `VHS_SPEC_BROWSER=1` so
 the default `make test` stays dependency-free.
 
-All of upstream's CLI surfaces are implemented:
+Every CLI surface upstream has is implemented except `vhs serve`, the hosted
+SSH service (see below):
 
 * `vhs record` opens a pseudo-terminal for the shell named by `--shell` (or
   `$SHELL`), puts the recording terminal in raw mode, and prints the equivalent
@@ -93,6 +94,16 @@ All of upstream's CLI surfaces are implemented:
 * `vhs themes [--markdown]` lists every built-in theme, one per line.
 * `vhs validate demo.tape other.tape` parses tapes without running them and
   reports syntax errors with the same gutter and carets as evaluation.
+* `vhs man` (or `vhs manual`) prints the manual: a roff man page when piped
+  (`vhs man > vhs.1`) or the markdown manual on a terminal. The roff page is
+  byte-identical to upstream's mango-cobra output apart from the commands this
+  port does not have.
+
+`vhs serve` is not ported: it is an SSH server (upstream uses charmbracelet/wish)
+that streams a rendered GIF back over the session, and Crystal has no SSH server
+in std or in a maintained shard — the available options are native-libssh
+bindings from experimental projects. Evaluating tapes, recording, publishing, and
+the rest of the CLI do not depend on it.
 
 `record` needs the `vhs-record-shell` launcher next to the `vhs` binary (both are
 built by `make build`); it can also be pointed at with `$VHS_RECORD_HELPER` or

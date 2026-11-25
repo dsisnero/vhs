@@ -80,6 +80,8 @@ module Vhs::CLI
       themes_command(args[1..])
     when "validate"
       validate_command(args[1..])
+    when "man", "manual"
+      man_command(args[1..])
     else
       evaluate(args)
     end
@@ -352,6 +354,34 @@ module Vhs::CLI
 
     STDERR.puts "invalid tape file(s)" unless valid
     valid
+  end
+
+  # man_command prints the manual, upstream's hidden `manual` command (aliased
+  # `man`): the markdown manual on a terminal, a roff man page when piped.
+  #
+  # Upstream styles the terminal branch with glamour; the port prints the same
+  # markdown unstyled (see plans/parity.md).
+  private def man_command(args : Array(String)) : NoReturn
+    extra = [] of String
+
+    OptionParser.parse(args) do |parser|
+      parser.banner = "Usage: vhs manual"
+      parser.on("-h", "--help", "Show this help") do
+        puts parser
+        exit 0
+      end
+      parser.unknown_args do |unknown|
+        extra = unknown.to_a
+      end
+    end
+
+    unless extra.empty?
+      STDERR.puts %(Error: unknown command "#{extra.first}" for "vhs manual")
+      exit 1
+    end
+
+    puts STDOUT.tty? ? Vhs::Man.markdown_manual : Vhs::Man.man_page
+    exit 0
   end
 
   # publish_command uploads a GIF, upstream's `publish` command.
