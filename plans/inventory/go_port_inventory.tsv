@@ -43,17 +43,17 @@ command.go::func::ExecuteWait	func	partial	src/vhs/evaluator.cr:542, spec/vhs/ev
 command.go::type::CommandFunc	type	ported	src/vhs/evaluator.cr:289, src/vhs/evaluator.cr:292	Alias Proc(Parser::Command, VHS, Exception?) backing command_funcs/settings; registry key set asserted in command_spec.cr.
 command_test.go::test::TestCommand	test	ported	spec/vhs/command_spec.cr:5, spec/vhs/evaluator_spec.cr:119, spec/vhs/evaluator_spec.cr:150	Crystal now matches the upstream command function count and key set, and also has direct evaluator coverage for Wait and Shift execution.
 command_test.go::test::TestExecuteSetTheme	test	ported	spec/vhs/command_spec.cr:57, spec/vhs/evaluator_spec.cr:46	Crystal covers the same theme-resolution scenarios as upstream command_test, plus evaluator-level Set Theme command behavior.
-draw.go::func::MakeBorderRadiusMask	func	missing	-	auto-generated
-draw.go::func::MakeWindowBar	func	missing	-	auto-generated
-draw.go::method::circle.At	method	missing	-	auto-generated
-draw.go::method::circle.Bounds	method	missing	-	auto-generated
-draw.go::method::circle.ColorModel	method	missing	-	auto-generated
-draw.go::method::rect.At	method	missing	-	auto-generated
-draw.go::method::rect.Bounds	method	missing	-	auto-generated
-draw.go::method::rect.ColorModel	method	missing	-	auto-generated
-draw.go::method::roundedrect.At	method	missing	-	auto-generated
-draw.go::method::roundedrect.Bounds	method	missing	-	auto-generated
-draw.go::method::roundedrect.ColorModel	method	missing	-	auto-generated
+draw.go::func::MakeBorderRadiusMask	func	ported	src/vhs/draw.cr:132, spec/vhs/draw_spec.cr:104	Writes a grayscale PNG where the rounded-rect coverage is the pixel value, which is what ffmpeg's alphamerge reads; corners are asserted 0 and the body 255.
+draw.go::func::MakeWindowBar	func	ported	src/vhs/draw.cr:143, spec/vhs/draw_spec.cr:125	Dispatches Colorful/ColorfulRight/Rings/RingsRight like upstream and ignores unknown styles; each style is asserted pixel-by-pixel (dot colors, mirrored positions, hollow ring centers).
+draw.go::method::circle.At	method	ported	src/vhs/draw.cr:49, spec/vhs/draw_spec.cr:70	Same antialiasing math (half-pixel offsets, radius-1, dist<0 opaque / dist<=1 partial); asserted for center, rim, and outside pixels.
+draw.go::method::circle.Bounds	method	ported	src/vhs/draw.cr:45, spec/vhs/draw_spec.cr:70	Returns a {x0, y0, x1, y1} tuple where upstream returns image.Rectangle; asserted for a sample circle.
+draw.go::method::circle.ColorModel	method	intentional_divergence	-	Go's image.Image interface artifact: the port's masks are plain structs exposing alpha_at/bounds, so there is no color model to report.
+draw.go::method::rect.At	method	ported	src/vhs/draw.cr:78, spec/vhs/draw_spec.cr:83	Same half-open rectangle test as upstream; asserted inside edges and outside both bounds.
+draw.go::method::rect.Bounds	method	ported	src/vhs/draw.cr:74, spec/vhs/draw_spec.cr:83	Returns the {x0, y0, x1, y1} tuple; asserted for a sample rect.
+draw.go::method::rect.ColorModel	method	intentional_divergence	-	Go's image.Image interface artifact; the port uses alpha_at/bounds instead.
+draw.go::method::roundedrect.At	method	ported	src/vhs/draw.cr:102, spec/vhs/draw_spec.cr:92	Four corner circles with radius+1, mirroring upstream; asserted for a corner, the body, and both side midpoints.
+draw.go::method::roundedrect.Bounds	method	ported	src/vhs/draw.cr:98, spec/vhs/draw_spec.cr:92	Returns the {x0, y0, x1, y1} tuple; asserted for a sample rounded rect.
+draw.go::method::roundedrect.ColorModel	method	intentional_divergence	-	Go's image.Image interface artifact; the port uses alpha_at/bounds instead.
 error.go::const::ErrorColumnOffset	const	ported	src/vhs/error.cr:17, spec/vhs/error_spec.cr:24	Offset value 5 asserted; print_error uses it to indent the caret line under the token column.
 error.go::func::LineNumber	func	ported	src/vhs/error.cr:34, spec/vhs/error_spec.cr:44	Formats ' %2d │ ' with the same gutter; lipgloss LineNumberStyle (color 8) is emitted as ANSI 90 rather than negotiated at runtime.
 error.go::func::Underline	func	ported	src/vhs/error.cr:29, spec/vhs/error_spec.cr:30	Repeats '^' n times in ERROR_STYLE; count, zero-length case, and ANSI wrapping asserted.

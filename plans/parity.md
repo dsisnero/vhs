@@ -8,19 +8,15 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the ledger now reflects reality for every file: 159 rows
-  `ported`, 23 `partial`, 23 `in_progress`, 41 `missing`, 2
-  `intentional_divergence`, and no test ID is missing. The 41 missing rows are
-  concentrated in the renderer (`ffmpeg.go` 16, `draw.go` 11, `video.go` 6,
-  `screenshot.go::MakeScreenshots`) plus CLI-level behavior (`publish`,
-  `syntax`, `record`, `testing::DefaultTestOptions`) and three `VHS` lifecycle
-  methods (`Setup`, `Cleanup`, `ApplyLoopOffset`).
+- **Current focus:** `draw.go` is ported (`src/vhs/draw.cr`: window bar, border
+  radius mask, hex parsing) and left `missing` are 30 rows: `ffmpeg.go` 16,
+  `video.go` 6, three `VHS` lifecycle methods, and six CLI-level rows. The
+  draw port is not wired yet — `StreamBuilder` is what calls it.
 - **Next up:**
-  1. Port `ffmpeg.go`'s filter/stream builders (16 rows) with `video.go` (6) and
-     `draw.go` (11) in the same pass: today `src/vhs/ffmpeg_renderer.cr` builds
-     args ad hoc with no spec coverage, and `draw.go`'s window bar /
-     border-radius masks are absent. That pass also unblocks
-     `screenshot.go::MakeScreenshots`, `VHS#ApplyLoopOffset`, and
+  1. Port `ffmpeg.go`'s filter/stream builders (16 rows) and `video.go`'s
+     command assembly (6 rows), then point `src/vhs/ffmpeg_renderer.cr` at them
+     so `MakeWindowBar`/`MakeBorderRadiusMask` are actually used. That pass also
+     unblocks `screenshot.go::MakeScreenshots`, `VHS#ApplyLoopOffset`, and
      `VHS#Cleanup`.
   2. Port the remaining `VHS` lifecycle gaps: `Setup` (terminal/viewport
      sizing after the settings run) and the frame-capture parity items.
@@ -66,9 +62,12 @@ are*, not *how the repo works*.
     `LineNumberStyle`, …) are not in the ledger's kind vocabulary and are not
     ported as styles: `ErrorStyle`/`LineNumberStyle` became the ANSI constants in
     `src/vhs/error.cr`, and the rest still land with `syntax.go`/`highlight`.
-  - Renderers: `png_renderer.cr` has spec coverage; `ffmpeg_renderer.cr` is
-    unverified and does not mirror upstream's builders (`ffmpeg.go` 16,
-    `draw.go` 11, `video.go` 6 still `missing`).
+  - Renderers: `png_renderer.cr` has spec coverage. `draw.go` is ported as
+    `src/vhs/draw.cr` with pixel-level spec coverage (masks, both bar styles,
+    mirrored variants, hex parsing), but nothing calls it yet — wiring belongs
+    to the `ffmpeg.go`/`video.go` pass. That pass is the remaining renderer gap
+    (`ffmpeg.go` 16, `video.go` 6 still `missing`), and `ffmpeg_renderer.cr`
+    still builds args ad hoc.
   - VHS lifecycle: `Start` and `Render` are `partial` (headless terminal
     emulator + PNG frames instead of ttyd/rod canvases); `Setup`, `Cleanup`, and
     `ApplyLoopOffset` are `missing`. `VHS.new` now seeds
@@ -118,14 +117,13 @@ are*, not *how the repo works*.
 - **Last commit:** `518e8b9` port: reconcile the
   vhs/testing/themes/screenshot/record/shell rows (working tree clean at that
   commit).
-- **Ledger `missing` rows left (41), by file:** `ffmpeg.go` 16, `draw.go` 11,
-  `video.go` 6, `vhs.go` 3 (`Setup`, `Cleanup`, `ApplyLoopOffset`),
-  `testing.go` 1 (`DefaultTestOptions`), `screenshot.go` 1 (`MakeScreenshots`),
-  `record.go` 1, `publish.go` 1, `syntax.go` 1. No test IDs are `missing` any
-  more.
-- **Gates:** `make lint` pass (24 files); `make test` `126 examples, 0
+- **Ledger `missing` rows left (30), by file:** `ffmpeg.go` 16, `video.go` 6,
+  `vhs.go` 3 (`Setup`, `Cleanup`, `ApplyLoopOffset`), `testing.go` 1
+  (`DefaultTestOptions`), `screenshot.go` 1 (`MakeScreenshots`), `record.go` 1,
+  `publish.go` 1, `syntax.go` 1. No test IDs are `missing` any more.
+- **Gates:** `make lint` pass (26 files); `make test` `142 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 159 `ported`, 23 `partial`, 23 `in_progress`, 41 `missing`, 2
+  rows: 167 `ported`, 23 `partial`, 23 `in_progress`, 30 `missing`, 5
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -150,7 +148,9 @@ Keep this block accurate after every feature: the next session reads it first
 - [x] Reconcile `vhs.go` (13), `themes.go` (4), `screenshot.go` (3),
       `testing.go` (5), `record.go`, `shell.go` rows against the port's actual
       surface (the three `VHS` lifecycle methods stay `missing`)
-- [ ] Reconcile `draw.go` (11), `video.go` (6) with the renderer pass
+- [x] Reconcile `draw.go` (11) by porting it to `src/vhs/draw.cr` (8 ported, 3
+      intentional divergences for Go's image.Image interface artifacts)
+- [ ] Reconcile `ffmpeg.go` (16), `video.go` (6) and wire both renderer files
 - [ ] Regenerate `go_source_parity.tsv` and confirm `make inventory`
 
 ## Phase 2 — Upstream tests still unmapped
@@ -163,11 +163,16 @@ Keep this block accurate after every feature: the next session reads it first
 
 ## Phase 3 — Renderer parity
 
+- [x] Port `draw.go` — border-radius mask, window bar (Colorful/Rings, mirrored),
+      hex color parsing
 - [ ] Port `ffmpeg.go` `FilterComplexBuilder` (window bar, border radius,
       margin fill, GIF)
 - [ ] Port `ffmpeg.go` `StreamBuilder` (margin, bar, corner, mp4, webm)
 - [ ] Port `ffmpeg.go::calcTermDimensions` and add output fixtures
 - [ ] Reconcile `video.go` (6 rows) with `src/vhs/ffmpeg_renderer.cr`
+- [ ] Wire `StreamBuilder`/`FilterComplexBuilder` into `ffmpeg_renderer.cr` and
+      switch the frame capture to text + cursor streams
+- [ ] Add output fixtures (`calcTermDimensions`)
 
 ## Phase 4 — CLI surfaces
 
@@ -189,6 +194,11 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Draw::Circle`/`Rectangle`/`RoundedRectangle` expose `alpha_at`/`bounds`
+  instead of Go's `image.Image` interface (`At`/`Bounds`/`ColorModel`), so the
+  three `ColorModel` rows are `intentional_divergence`. The port composites the
+  same masks directly rather than through `image/draw`, which is equivalent for
+  these opaque sources and is asserted pixel-by-pixel.
 - `Parser::Command#to_s` prints the args when `options` is empty, where
   upstream's `Command.String` formats two type/options fields and drops them
   (its empty-options branch is `fmt.Sprintf("%s %s", c.Type, c.Options)`).
