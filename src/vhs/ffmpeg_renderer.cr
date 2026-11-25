@@ -59,6 +59,9 @@ module Vhs
 
     private def ffmpeg_available? : Bool
       Process.run("which", {"ffmpeg"}, output: Process::Redirect::Close, error: Process::Redirect::Close).success?
+    rescue File::NotFoundError
+      # `which` itself is missing from PATH.
+      false
     end
 
     # ensure_dir creates the parent folders needed for an output path.

@@ -109,6 +109,65 @@ module Vhs
       end
     end
 
+    describe "ExecuteSleep" do
+      it "sleeps for the parsed duration" do
+        vhs = behavior_vhs
+        started = Time.instant
+
+        Vhs.execute(behavior_command(Token::SLEEP, "", "60ms"), vhs).should be_nil
+
+        (Time.instant - started).should be >= 55.milliseconds
+        vhs.stop
+      end
+    end
+
+    describe "ExecuteWait" do
+      it "gives up after the command's timeout" do
+        vhs = behavior_vhs
+        started = Time.instant
+
+        # Nothing matches, so the wait runs out its 50ms budget and errors with
+        # upstream's timeout message.
+        command = behavior_command(Token::WAIT, "50ms", "Screen /never-matches/")
+        error = Vhs.execute(command, vhs)
+
+        error.to_s.should contain("timeout waiting for")
+        (Time.instant - started).should be >= 45.milliseconds
+        (Time.instant - started).should be < 5.seconds
+        vhs.stop
+      end
+
+      it "rejects an unknown scope" do
+        vhs = behavior_vhs
+        command = behavior_command(Token::WAIT, "20ms", "Window /x/")
+
+        Vhs.execute(command, vhs).to_s.should contain("failed to execute command:")
+        vhs.stop
+      end
+    end
+
+    describe "FFmpegRenderer.render" do
+      it "reports a missing ffmpeg instead of failing silently" do
+        original_path = ENV["PATH"]?
+        video = Vhs.default_video_options
+        video.output = VideoOutputs.new(gif: "./temp/command-behavior/none.gif")
+
+        begin
+          ENV["PATH"] = "/nonexistent"
+          error = FFmpegRenderer.render(video, ScreenshotOptions.new)
+          error.to_s.should contain("ffmpeg is not installed")
+        ensure
+          ENV["PATH"] = original_path
+        end
+      end
+
+      it "does nothing when no output is configured" do
+        video = Vhs.default_video_options
+        video.output = VideoOutputs.new
+        FFmpegRenderer.render(video, ScreenshotOptions.new).should be_nil
+      end
+    end
+
     describe "ExecuteScreenshot" do
       it "arms the next frame and records it in the screenshots map" do
         vhs = behavior_vhs

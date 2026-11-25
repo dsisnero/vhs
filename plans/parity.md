@@ -15,10 +15,11 @@ are*, not *how the repo works*.
   `Start`. `VHS` and `Setup` are recorded as intentional divergences because
   their upstream surface is browser/rod-specific.
 - **Next up:**
-  1. The remaining 5 `partial` rows: `ExecuteSleep` elapsed time,
-     `ExecuteWait`'s timeout/Screen scope, `VHS#Render` under a failing ffmpeg,
-     `Evaluate`'s recording-order divergence, and the `StyleOptions` struct
-     defaults.
+  1. The single remaining `partial` row is `Evaluate`: upstream starts recording
+     after the settings/output header and fast-forwards an initial `Hide` before
+     the first captured frame, while the port starts capture inside `Start`.
+     Closing it means splitting `Start` (terminal only) from a recording start
+     after the header.
   2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
      reviewed discovery change).
   3. Consider the tree-sitter ID migration (378 items) as its own reviewed
@@ -149,11 +150,11 @@ are*, not *how the repo works*.
 - **Last commit:** `a63cda1` port: extract input synthesis and fix key repeats
   and per-Type speed (working tree clean at that commit).
 - **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
-  rows: 234 `ported`, 5 `partial`, 9 `intentional_divergence`. No test IDs are
-  `missing`.
-- **Gates:** `make lint` pass (37 files); `make test` `217 examples, 0
+  rows: 237 `ported`, 1 `partial` (`Evaluate`'s recording order), 10
+  `intentional_divergence`. No test IDs are `missing`.
+- **Gates:** `make lint` pass (37 files); `make test` `222 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 234 `ported`, 5 `partial`, 0 `in_progress`, 0 `missing`, 9
+  rows: 237 `ported`, 1 `partial`, 0 `in_progress`, 0 `missing`, 10
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
