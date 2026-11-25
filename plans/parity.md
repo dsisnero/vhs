@@ -8,22 +8,20 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** finish reconciling the curated ledger with the code already
-  in `src/`. `command.go`, `style.go`, `error.go`, `evaluator.go`,
-  `token/token.go` (85 rows + `TestToCamel`) and `lexer/lexer.go` (3 rows + both
-  upstream lexer tests) are reconciled. Next is `parser/parser.go` (12 rows) and
-  its six upstream test IDs — the last unledgered implementation block.
+- **Current focus:** ledger reconciliation is done for every block whose code
+  already existed (`command.go`, `style.go`, `error.go`, `evaluator.go`,
+  `token/token.go`, `lexer/lexer.go`, `parser/parser.go`) and all 17 upstream
+  test IDs are `ported`. What is left is genuinely unported behavior:
+  the renderer (`ffmpeg.go`, `video.go`, `draw.go`), `vhs.go`, `testing.go`,
+  and the CLI surfaces.
 - **Next up:**
-  1. Reconcile `parser/parser.go` (12) and port its upstream tests:
-     `TestParser`, `TestParserErrors`, `TestParseCtrl`, `TestParseScreeenshot`,
-     `TestParseSource`, `TestParseTapeFile` (429 lines of Go table tests).
-  2. Reconcile the remaining source rows: `ffmpeg.go` (16), `vhs.go` (13),
-     `draw.go` (11), `video.go` (6), `testing.go` (5), `themes.go` (4),
-     `screenshot.go` (3), `record.go` (1), `shell.go` (1).
-  3. Port `ffmpeg.go`'s filter/stream builders — today
-     `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc and has no
-     spec coverage.
-  4. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
+  1. Reconcile the remaining small source rows: `vhs.go` (13), `testing.go` (5),
+     `themes.go` (4), `screenshot.go` (3), `record.go` (1), `shell.go` (1).
+  2. Port `ffmpeg.go`'s filter/stream builders (16 rows) — `video.go` (6) and
+     `draw.go` (11) belong to the same pass, since today
+     `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc with no spec
+     coverage, and `draw.go`'s window bar / border-radius masks are absent.
+  3. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
      `syntax.go`, `testing.go`, `man.go`.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
@@ -33,8 +31,13 @@ are*, not *how the repo works*.
     ported — `spec/vhs/lexer_spec.cr` now replays the 81-expectation
     `TestNextToken` tape and the 199-expectation `all.tape` fixture table
     (checked in as `spec/fixtures/all.tape`).
-  - Parser: implemented in `src/vhs/parser.cr` with specs; the 12 source rows
-    and six `parser_test.go` IDs are still `missing`.
+  - Parser: all 12 `parser/parser.go` rows reconciled (`CommandType` is an
+    `intentional_divergence` because upstream's type is deadcode) and all six
+    upstream parser tests ported — `spec/vhs/parser_spec.cr` replays the
+    23-command `TestParser` table, the four `TestParserErrors` strings with
+    upstream line numbers, the six `TestParseCtrl` cases, the five
+    `TestParseSource` and two `TestParseScreenshot` cases, and the full
+    75-command `TestParseTapeFile` table (the old spot-check is gone).
   - Evaluate entrypoint: `EvaluatorOption` is `ported` (alias applied after
     stop, asserted by three specs); `Evaluate` itself is `partial` because the
     SET/OUTPUT/REQUIRE highlight print, dimension validation, and the render
@@ -100,13 +103,13 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `c3b8a9d` port: port the upstream lexer tests and reconcile
   lexer/lexer.go (working tree clean at that commit).
-- **Ledger `missing` rows left (80), by file:** `ffmpeg.go` 16, `vhs.go` 13,
-  `parser/parser.go` 12, `draw.go` 11, `video.go` 6, `testing.go` 5,
-  `themes.go` 4, `screenshot.go` 3, `record.go` 1, `shell.go` 1,
-  `publish.go` 1, `syntax.go` 1, plus the six `parser_test.go` IDs.
-- **Gates:** `make lint` pass (24 files); `make test` `115 examples, 0
+- **Ledger `missing` rows left (62), by file:** `ffmpeg.go` 16, `vhs.go` 13,
+  `draw.go` 11, `video.go` 6, `testing.go` 5, `themes.go` 4, `screenshot.go` 3,
+  `record.go` 1, `shell.go` 1, `publish.go` 1, `syntax.go` 1. No test IDs are
+  `missing` any more.
+- **Gates:** `make lint` pass (24 files); `make test` `118 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 128 `ported`, 16 `partial`, 23 `in_progress`, 80 `missing`, 1
+  rows: 145 `ported`, 16 `partial`, 23 `in_progress`, 62 `missing`, 2
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -127,7 +130,7 @@ Keep this block accurate after every feature: the next session reads it first
       tables in `spec/vhs/token_spec.cr`; dropped the non-upstream `Home`
       keyword
 - [x] Reconcile `lexer/lexer.go` (3) and port both upstream lexer tests
-- [ ] Reconcile `parser/parser.go` (12) and port its six upstream tests
+- [x] Reconcile `parser/parser.go` (12) and port its six upstream tests
 - [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
       `screenshot.go` (3), `record.go`, `shell.go` rows
 - [ ] Regenerate `go_source_parity.tsv` and confirm `make inventory`
@@ -135,7 +138,7 @@ Keep this block accurate after every feature: the next session reads it first
 ## Phase 2 — Upstream tests still unmapped
 
 - [x] `lexer/lexer_test.go::TestNextToken`, `TestLexTapeFile`
-- [ ] `parser/parser_test.go` (`TestParser`, `TestParserErrors`,
+- [x] `parser/parser_test.go` (`TestParser`, `TestParserErrors`,
       `TestParseCtrl`, `TestParseScreeenshot`, `TestParseSource`,
       `TestParseTapeFile`)
 - [x] `token/token_test.go::TestToCamel`
@@ -168,6 +171,14 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Parser::Command#to_s` prints the args when `options` is empty, where
+  upstream's `Command.String` formats two type/options fields and drops them
+  (its empty-options branch is `fmt.Sprintf("%s %s", c.Type, c.Options)`).
+  Everything else about the rendering matches, including the unconditional
+  ToCamel of the token name.
+- `Parser::CommandType` has no Crystal counterpart: upstream's `CommandTypes`
+  list is deadcode and `Command.Type` is just `token.Type`, so the port keeps
+  `Token::Type` and renders through `Token.to_camel`.
 - `Vhs::Token::Type` is a `Symbol` alias where upstream's `Type` is a string
   type. Values match one-for-one, so this shows up only in string construction
   and in `Type.String`, which becomes `Token.to_human_readable` because a Symbol

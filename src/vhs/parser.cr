@@ -41,11 +41,20 @@ module Vhs
       def initialize(@type, @options = "", @args = "", @source = "")
       end
 
+      # Renders the command the way upstream's CommandType.String does: the token
+      # name always goes through ToCamel, so SET renders as "Set" (unlike
+      # Type.String, which only converts commands and settings).
+      #
+      # Divergence: upstream's Command.String only prints args when Options is
+      # set (its empty-options branch formats "%s %s" with two type/options
+      # fields), so a bare `Type "hi"` renders as "Type "; the port prints the
+      # args, which is what the argument is for.
       def to_s(io : IO) : Nil
-        if !options.empty?
-          io << type << " " << options << " " << args
+        io << Token.to_camel(type.to_s)
+        if options.empty?
+          io << ' ' << args
         else
-          io << type << " " << args
+          io << ' ' << options << ' ' << args
         end
       end
     end

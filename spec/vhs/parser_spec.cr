@@ -1,6 +1,86 @@
 require "../spec_helper"
 require "file_utils"
 
+# Commands expected from spec/fixtures/all.tape, transcribed from upstream
+# parser_test.go::TestParseTapeFile (v0.10.0+19).
+EXPECTED_TAPE_COMMANDS = [
+  {type: Vhs::Token::OUTPUT, options: ".gif", args: "examples/fixtures/all.gif"},
+  {type: Vhs::Token::OUTPUT, options: ".mp4", args: "examples/fixtures/all.mp4"},
+  {type: Vhs::Token::OUTPUT, options: ".webm", args: "examples/fixtures/all.webm"},
+  {type: Vhs::Token::SET, options: "Shell", args: "fish"},
+  {type: Vhs::Token::SET, options: "FontSize", args: "22"},
+  {type: Vhs::Token::SET, options: "FontFamily", args: "DejaVu Sans Mono"},
+  {type: Vhs::Token::SET, options: "Height", args: "600"},
+  {type: Vhs::Token::SET, options: "Width", args: "1200"},
+  {type: Vhs::Token::SET, options: "LetterSpacing", args: "1"},
+  {type: Vhs::Token::SET, options: "LineHeight", args: "1.2"},
+  {type: Vhs::Token::SET, options: "Theme", args: "{ \"name\": \"Whimsy\", \"black\": \"#535178\", \"red\": \"#ef6487\", \"green\": \"#5eca89\", \"yellow\": \"#fdd877\", \"blue\": \"#65aef7\", \"purple\": \"#aa7ff0\", \"cyan\": \"#43c1be\", \"white\": \"#ffffff\", \"brightBlack\": \"#535178\", \"brightRed\": \"#ef6487\", \"brightGreen\": \"#5eca89\", \"brightYellow\": \"#fdd877\", \"brightBlue\": \"#65aef7\", \"brightPurple\": \"#aa7ff0\", \"brightCyan\": \"#43c1be\", \"brightWhite\": \"#ffffff\", \"background\": \"#29283b\", \"foreground\": \"#b3b0d6\", \"selectionBackground\": \"#3d3c58\", \"cursorColor\": \"#b3b0d6\" }"},
+  {type: Vhs::Token::SET, options: "Theme", args: "Catppuccin Mocha"},
+  {type: Vhs::Token::SET, options: "Padding", args: "50"},
+  {type: Vhs::Token::SET, options: "Framerate", args: "60"},
+  {type: Vhs::Token::SET, options: "PlaybackSpeed", args: "2"},
+  {type: Vhs::Token::SET, options: "TypingSpeed", args: ".1s"},
+  {type: Vhs::Token::SET, options: "LoopOffset", args: "60.4%"},
+  {type: Vhs::Token::SET, options: "LoopOffset", args: "20.99%"},
+  {type: Vhs::Token::SET, options: "CursorBlink", args: "false"},
+  {type: Vhs::Token::SLEEP, options: "", args: "1s"},
+  {type: Vhs::Token::SLEEP, options: "", args: "500ms"},
+  {type: Vhs::Token::SLEEP, options: "", args: ".5s"},
+  {type: Vhs::Token::SLEEP, options: "", args: "0.5s"},
+  {type: Vhs::Token::TYPE, options: ".5s", args: "All"},
+  {type: Vhs::Token::TYPE, options: "500ms", args: "All"},
+  {type: Vhs::Token::TYPE, options: "", args: "Double Quote"},
+  {type: Vhs::Token::TYPE, options: "", args: "\"Single\" Quote"},
+  {type: Vhs::Token::TYPE, options: "", args: "\"Backtick\" 'Quote'"},
+  {type: Vhs::Token::BACKSPACE, options: "", args: "1"},
+  {type: Vhs::Token::BACKSPACE, options: "", args: "2"},
+  {type: Vhs::Token::BACKSPACE, options: "1s", args: "3"},
+  {type: Vhs::Token::DELETE, options: "", args: "1"},
+  {type: Vhs::Token::DELETE, options: "", args: "2"},
+  {type: Vhs::Token::DELETE, options: "1s", args: "3"},
+  {type: Vhs::Token::INSERT, options: "", args: "1"},
+  {type: Vhs::Token::INSERT, options: "", args: "2"},
+  {type: Vhs::Token::INSERT, options: "1s", args: "3"},
+  {type: Vhs::Token::DOWN, options: "", args: "1"},
+  {type: Vhs::Token::DOWN, options: "", args: "2"},
+  {type: Vhs::Token::DOWN, options: "1s", args: "3"},
+  {type: Vhs::Token::PAGE_DOWN, options: "", args: "1"},
+  {type: Vhs::Token::PAGE_DOWN, options: "", args: "2"},
+  {type: Vhs::Token::PAGE_DOWN, options: "1s", args: "3"},
+  {type: Vhs::Token::ENTER, options: "", args: "1"},
+  {type: Vhs::Token::ENTER, options: "", args: "2"},
+  {type: Vhs::Token::ENTER, options: "1s", args: "3"},
+  {type: Vhs::Token::SPACE, options: "", args: "1"},
+  {type: Vhs::Token::SPACE, options: "", args: "2"},
+  {type: Vhs::Token::SPACE, options: "1s", args: "3"},
+  {type: Vhs::Token::TAB, options: "", args: "1"},
+  {type: Vhs::Token::TAB, options: "", args: "2"},
+  {type: Vhs::Token::TAB, options: "1s", args: "3"},
+  {type: Vhs::Token::LEFT, options: "", args: "1"},
+  {type: Vhs::Token::LEFT, options: "", args: "2"},
+  {type: Vhs::Token::LEFT, options: "1s", args: "3"},
+  {type: Vhs::Token::RIGHT, options: "", args: "1"},
+  {type: Vhs::Token::RIGHT, options: "", args: "2"},
+  {type: Vhs::Token::RIGHT, options: "1s", args: "3"},
+  {type: Vhs::Token::UP, options: "", args: "1"},
+  {type: Vhs::Token::UP, options: "", args: "2"},
+  {type: Vhs::Token::UP, options: "1s", args: "3"},
+  {type: Vhs::Token::PAGE_UP, options: "", args: "1"},
+  {type: Vhs::Token::PAGE_UP, options: "", args: "2"},
+  {type: Vhs::Token::PAGE_UP, options: "1s", args: "3"},
+  {type: Vhs::Token::DOWN, options: "", args: "1"},
+  {type: Vhs::Token::DOWN, options: "", args: "2"},
+  {type: Vhs::Token::DOWN, options: "1s", args: "3"},
+  {type: Vhs::Token::CTRL, options: "", args: "C"},
+  {type: Vhs::Token::CTRL, options: "", args: "L"},
+  {type: Vhs::Token::CTRL, options: "", args: "R"},
+  {type: Vhs::Token::ALT, options: "", args: "."},
+  {type: Vhs::Token::ALT, options: "", args: "L"},
+  {type: Vhs::Token::ALT, options: "", args: "i"},
+  {type: Vhs::Token::HIDE, options: "", args: ""},
+  {type: Vhs::Token::SHOW, options: "", args: ""},
+]
+
 module Vhs
   describe Parser do
     describe "#parse" do
@@ -74,29 +154,29 @@ module Vhs
         TAPE
 
         expected = [
-          {type: Token::SET, options: "TypingSpeed", args: "100ms"},
-          {type: Token::SET, options: "WaitTimeout", args: "1m"},
-          {type: Token::SET, options: "WaitPattern", args: "foo"},
-          {type: Token::TYPE, options: "", args: "echo 'Hello, World!'"},
-          {type: Token::ENTER, options: "", args: "1"},
-          {type: Token::BACKSPACE, options: "0.1s", args: "5"},
-          {type: Token::BACKSPACE, options: ".1s", args: "5"},
-          {type: Token::BACKSPACE, options: "1s", args: "5"},
-          {type: Token::BACKSPACE, options: "100ms", args: "5"},
-          {type: Token::DELETE, options: "", args: "2"},
-          {type: Token::INSERT, options: "", args: "2"},
-          {type: Token::RIGHT, options: "", args: "3"},
-          {type: Token::LEFT, options: "", args: "3"},
-          {type: Token::UP, options: "50ms", args: "1"},
-          {type: Token::DOWN, options: "", args: "2"},
-          {type: Token::CTRL, options: "", args: "C"},
-          {type: Token::CTRL, options: "", args: "L"},
-          {type: Token::ALT, options: "", args: "."},
-          {type: Token::SLEEP, options: "", args: "100ms"},
-          {type: Token::SLEEP, options: "", args: "3s"},
-          {type: Token::WAIT, options: "", args: "Line"},
-          {type: Token::WAIT, options: "", args: "Screen"},
-          {type: Token::WAIT, options: "100ms", args: "Line foobar"},
+          {type: Vhs::Token::SET, options: "TypingSpeed", args: "100ms"},
+          {type: Vhs::Token::SET, options: "WaitTimeout", args: "1m"},
+          {type: Vhs::Token::SET, options: "WaitPattern", args: "foo"},
+          {type: Vhs::Token::TYPE, options: "", args: "echo 'Hello, World!'"},
+          {type: Vhs::Token::ENTER, options: "", args: "1"},
+          {type: Vhs::Token::BACKSPACE, options: "0.1s", args: "5"},
+          {type: Vhs::Token::BACKSPACE, options: ".1s", args: "5"},
+          {type: Vhs::Token::BACKSPACE, options: "1s", args: "5"},
+          {type: Vhs::Token::BACKSPACE, options: "100ms", args: "5"},
+          {type: Vhs::Token::DELETE, options: "", args: "2"},
+          {type: Vhs::Token::INSERT, options: "", args: "2"},
+          {type: Vhs::Token::RIGHT, options: "", args: "3"},
+          {type: Vhs::Token::LEFT, options: "", args: "3"},
+          {type: Vhs::Token::UP, options: "50ms", args: "1"},
+          {type: Vhs::Token::DOWN, options: "", args: "2"},
+          {type: Vhs::Token::CTRL, options: "", args: "C"},
+          {type: Vhs::Token::CTRL, options: "", args: "L"},
+          {type: Vhs::Token::ALT, options: "", args: "."},
+          {type: Vhs::Token::SLEEP, options: "", args: "100ms"},
+          {type: Vhs::Token::SLEEP, options: "", args: "3s"},
+          {type: Vhs::Token::WAIT, options: "", args: "Line"},
+          {type: Vhs::Token::WAIT, options: "", args: "Screen"},
+          {type: Vhs::Token::WAIT, options: "100ms", args: "Line foobar"},
         ]
 
         lexer = Lexer.new(input)
@@ -114,8 +194,11 @@ module Vhs
     end
 
     describe "#parse errors" do
-      it "collects errors for invalid commands" do
-        input = <<-TAPE
+      it "collects upstream TestParserErrors in tape order" do
+        # Raw heredoc with a leading blank line: upstream's input starts with a
+        # newline, so its errors are reported on lines 2, 4, 5 and 5.
+        input = <<-'TAPE'
+
         Type Enter
         Type "echo 'Hello, World!'" Enter
         Foo
@@ -123,14 +206,13 @@ module Vhs
         TAPE
 
         expected_errors = [
-          " 1:6  │ Type expects string",
-          " 3:1  │ Invalid command: Foo",
-          " 4:1  │ Expected time after Sleep",
-          " 4:7  │ Invalid command: Bar",
+          " 2:6  │ Type expects string",
+          " 4:1  │ Invalid command: Foo",
+          " 5:1  │ Expected time after Sleep",
+          " 5:7  │ Invalid command: Bar",
         ]
 
-        lexer = Lexer.new(input)
-        parser = Parser.new(lexer)
+        parser = Parser.new(Lexer.new(input))
         parser.parse
 
         parser.errors.size.should eq(expected_errors.size)
@@ -271,38 +353,35 @@ module Vhs
     end
 
     describe "#parse tape file" do
-      it "parses the all.tape fixture" do
-        input = File.read("spec/fixtures/all.tape")
-        lexer = Lexer.new(input)
-        parser = Parser.new(lexer)
+      it "parses the all.tape fixture exactly like upstream TestParseTapeFile" do
+        input = File.read(File.join(__DIR__, "..", "fixtures", "all.tape"))
+        parser = Parser.new(Lexer.new(input))
         commands = parser.parse
 
-        # Basic sanity check - should parse without errors
         parser.errors.size.should eq(0)
-        commands.size.should be > 0
+        commands.size.should eq(EXPECTED_TAPE_COMMANDS.size)
+        EXPECTED_TAPE_COMMANDS.each_with_index do |expected, i|
+          command = commands[i]
+          unless command.type == expected[:type] && command.options == expected[:options] && command.args == expected[:args]
+            fail "commands[#{i}]: expected #{expected[:type]}/#{expected[:options].inspect}/#{expected[:args].inspect}, got #{command.type}/#{command.options.inspect}/#{command.args.inspect}"
+          end
+        end
+      end
+    end
 
-        # Check first few commands match expected types
-        commands[0].type.should eq(Token::OUTPUT)
-        commands[0].options.should eq(".gif")
-        commands[0].args.should eq("examples/fixtures/all.gif")
+    describe "#to_s" do
+      it "renders the command type through ToCamel like upstream CommandType.String" do
+        command = Parser::Command.new(Token::SET, "FontSize", "16")
+        command.to_s.should eq("Set FontSize 16")
+      end
 
-        commands[1].type.should eq(Token::OUTPUT)
-        commands[1].options.should eq(".mp4")
-        commands[1].args.should eq("examples/fixtures/all.mp4")
+      it "renders commands without options" do
+        command = Parser::Command.new(Token::TYPE, "", "echo 'hi'")
+        command.to_s.should eq("Type echo 'hi'")
+      end
 
-        commands[2].type.should eq(Token::OUTPUT)
-        commands[2].options.should eq(".webm")
-        commands[2].args.should eq("examples/fixtures/all.webm")
-
-        # Check SET commands are present
-        set_commands = commands.select { |cmd| cmd.type == Token::SET }
-        set_commands.size.should be > 10
-
-        # Check for specific SET commands
-        shell_cmd = set_commands.find { |cmd| cmd.options == "Shell" }
-        shell_cmd.should_not be_nil
-        shell_cmd = shell_cmd.as(Vhs::Parser::Command)
-        shell_cmd.args.should eq("fish")
+      it "renders commands without args" do
+        Parser::Command.new(Token::HIDE).to_s.should eq("Hide ")
       end
     end
   end

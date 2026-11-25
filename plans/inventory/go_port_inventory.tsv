@@ -82,24 +82,24 @@ lexer/lexer.go::method::Lexer.NextToken	method	ported	src/vhs/lexer.cr:25, spec/
 lexer/lexer.go::struct::Lexer	struct	ported	src/vhs/lexer.cr:5, spec/vhs/lexer_spec.cr:335	Same input/pos/next_pos/line/column state; the all.tape token stream exercises comments, strings, JSON themes, numbers, units, and key sequences.
 lexer/lexer_test.go::test::TestLexTapeFile	test	ported	spec/vhs/lexer_spec.cr:335	Ports the upstream all.tape expectations (199 pairs) against the checked-in spec/fixtures/all.tape copy of the upstream fixture.
 lexer/lexer_test.go::test::TestNextToken	test	ported	spec/vhs/lexer_spec.cr:298	Ports the upstream tape input and all 81 expected (type, literal) pairs verbatim, including the escaped-regex cases.
-parser/parser.go::func::New	func	missing	-	auto-generated
-parser/parser.go::func::NewError	func	missing	-	auto-generated
-parser/parser.go::method::Command.String	method	missing	-	auto-generated
-parser/parser.go::method::CommandType.String	method	missing	-	auto-generated
-parser/parser.go::method::Error.Error	method	missing	-	auto-generated
-parser/parser.go::method::Error.String	method	missing	-	auto-generated
-parser/parser.go::method::Parser.Errors	method	missing	-	auto-generated
-parser/parser.go::method::Parser.Parse	method	missing	-	auto-generated
-parser/parser.go::struct::Command	struct	missing	-	auto-generated
-parser/parser.go::struct::Error	struct	missing	-	auto-generated
-parser/parser.go::struct::Parser	struct	missing	-	auto-generated
-parser/parser.go::type::CommandType	type	missing	-	auto-generated
-parser/parser_test.go::test::TestParseCtrl	test	missing	-	auto-generated
-parser/parser_test.go::test::TestParseScreeenshot	test	missing	-	auto-generated
-parser/parser_test.go::test::TestParseSource	test	missing	-	auto-generated
-parser/parser_test.go::test::TestParseTapeFile	test	missing	-	auto-generated
-parser/parser_test.go::test::TestParser	test	missing	-	auto-generated
-parser/parser_test.go::test::TestParserErrors	test	missing	-	auto-generated
+parser/parser.go::func::New	func	ported	src/vhs/parser.cr:9, spec/vhs/parser_spec.cr:129	Crystal spells it Parser#initialize (reads cur + peek like upstream New); asserted by every parser spec, including the 75-command all.tape table.
+parser/parser.go::func::NewError	func	ported	src/vhs/parser.cr:26, spec/vhs/parser_spec.cr:196	Upstream's NewError(token, msg) constructor is ParserError.new(token, message); the error table asserts the resulting token position and message.
+parser/parser.go::method::Command.String	method	ported	src/vhs/parser.cr:52, spec/vhs/parser_spec.cr:372	Command#to_s renders '<Type> [<options> ]<args>'; divergence: upstream's empty-options branch formats two type/options fields and drops args, so the port prints args instead (asserted by the #to_s specs).
+parser/parser.go::method::CommandType.String	method	ported	src/vhs/parser.cr:53, spec/vhs/parser_spec.cr:373	Go's CommandType has no Crystal type; the same unconditional ToCamel conversion lives in Command#to_s via Token.to_camel, so SET renders as Set.
+parser/parser.go::method::Error.Error	method	ported	src/vhs/parser.cr:29, spec/vhs/parser_spec.cr:196	Go's Error() delegates to String(); Crystal has the single ParserError#to_s, which the upstream error table asserts verbatim.
+parser/parser.go::method::Error.String	method	ported	src/vhs/parser.cr:29, spec/vhs/parser_spec.cr:196	Same '%2d:%-2d │ %s' layout; the upstream four-error table asserts exact line/column/message strings.
+parser/parser.go::method::Parser.Errors	method	ported	src/vhs/parser.cr:18, spec/vhs/parser_spec.cr:196	Getter instead of a method; asserted for size, order, and rendered text across parse/source/screenshot failures.
+parser/parser.go::method::Parser.Parse	method	ported	src/vhs/parser.cr:64, spec/vhs/parser_spec.cr:129	Matches upstream's parse loop (comments skipped, one or more commands per token); asserted by the 23-command TestParser table and the 75-command all.tape table.
+parser/parser.go::struct::Command	struct	ported	src/vhs/parser.cr:35, spec/vhs/parser_spec.cr:129	Same Type/Options/Args/Source fields; type/options/args are asserted for every command in both upstream tables.
+parser/parser.go::struct::Error	struct	ported	src/vhs/parser.cr:22, spec/vhs/parser_spec.cr:196	Crystal names it Parser::ParserError; it carries the token and the message (upstream's Msg) and renders identically.
+parser/parser.go::struct::Parser	struct	ported	src/vhs/parser.cr:6, spec/vhs/parser_spec.cr:355	Same lexer/cur/peek/errors state; the all.tape fixture parses to the full upstream command table with zero errors.
+parser/parser.go::type::CommandType	type	intentional_divergence	src/vhs/parser.cr:36	No Crystal alias: upstream's CommandTypes list is deadcode (nolint: deadcode) and Command.Type is just token.Type, so Command#type is Token::Type and rendering goes through Token.to_camel.
+parser/parser_test.go::test::TestParseCtrl	test	ported	spec/vhs/parser_spec.cr:225	All six upstream cases (multiple modifiers, out-of-order modifier failures, Ctrl+Alt+Right, Ctrl+Backspace, Ctrl+Space) asserted through parse, since parse_ctrl is private in Crystal.
+parser/parser_test.go::test::TestParseScreeenshot	test	ported	spec/vhs/parser_spec.cr:337	Both upstream cases: non-.png extension and a missing path.
+parser/parser_test.go::test::TestParseSource	test	ported	spec/vhs/parser_spec.cr:283	All five upstream cases: existing tape, missing file, wrong extension, no path, nested Source; paths point at ./temp like the rest of the suite.
+parser/parser_test.go::test::TestParseTapeFile	test	ported	spec/vhs/parser_spec.cr:355	Replaces the previous spot-check with the full upstream 75-command table over spec/fixtures/all.tape, compared field by field.
+parser/parser_test.go::test::TestParser	test	ported	spec/vhs/parser_spec.cr:129	Ports the upstream tape and all 23 expected {type, options, args} commands verbatim.
+parser/parser_test.go::test::TestParserErrors	test	ported	spec/vhs/parser_spec.cr:196	Ports the upstream input (including its leading newline, so errors land on lines 2/4/5/5) and all four rendered error strings.
 publish.go::func::Publish	func	missing	-	auto-generated
 record.go::func::Record	func	missing	-	auto-generated
 record_test.go::test::TestInputToTape	test	ported	spec/vhs/record_spec.cr:4	Crystal mirrors the upstream input-to-tape conversion scenarios for control sequences, repeated navigation keys, and compressed command output.
