@@ -1472,6 +1472,28 @@ module Vhs
         return v.errors
       end
 
+      # If the first command after the header is Hide, run forward to the
+      # matching Show before recording starts, so hidden frames are never
+      # captured (upstream does the same before Record).
+      if offset < cmds.size && cmds[offset].type == Token::HIDE
+        cmds[offset..].each_with_index do |cmd, i|
+          if cmd.type == Token::SHOW
+            offset += i
+            break
+          end
+
+          output.puts Highlight.highlight(cmd, true)
+          if err = execute(cmd, v)
+            v.stop
+            v.cleanup
+            return [err] of Exception
+          end
+        end
+      end
+
+      # Recording starts here, like upstream's Record(ctx) after the header.
+      v.begin_recording
+
       # Remaining commands execute in order. Settings after the header are ignored
       # with a warning, matching upstream.
       cmds[offset..].each do |cmd|
@@ -1724,13 +1746,18 @@ module Vhs
         # Ensure video input directory exists
         ensure_input_dir
 
-        # Start frame capture loop
-        start_frame_capture
-
         @started = true
       ensure
         @mutex.unlock
       end
+    end
+
+    # begin_recording starts capturing frames. Upstream starts recording after
+    # Start, Setup, and the settings/output header (plus any initial Hide
+    # fast-forward), so those commands are not captured; callers that just want a
+    # running terminal can skip this.
+    def begin_recording : Nil
+      start_frame_capture
     end
 
     # Stop stops recording and cleans up resources.
@@ -1756,7 +1783,8 @@ module Vhs
 
     # Start frame capture loop
     private def start_frame_capture : Nil
-      return unless @recording
+      # The recording flag is checked per frame, not here: upstream starts the
+      # recorder and lets Hide/Show gate the captures inside the loop.
       return if @frame_capture_fiber
 
       framerate = @options.video.framerate

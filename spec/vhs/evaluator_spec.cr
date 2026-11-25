@@ -253,6 +253,24 @@ module Vhs
       end
     end
 
+    describe "recording order" do
+      it "captures nothing while an initial Hide is in effect" do
+        # The tape hides before recording starts and closes with Show, so no
+        # frame can be captured: upstream's fast-forward means the hidden sleep
+        # is not recorded, and Render then fails with "no frames".
+        tape = <<-TAPE
+        Output test.gif
+        Hide
+        Sleep 0.2s
+        Show
+        TAPE
+
+        errors = Vhs.evaluate(tape, IO::Memory.new, drop_outputs_option)
+        errors.size.should eq(1)
+        errors.first.message.to_s.should contain("no frames")
+      end
+    end
+
     describe "non-style settings" do
       it "applies every remaining Set command to the options" do
         tape = <<-TAPE

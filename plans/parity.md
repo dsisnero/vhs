@@ -8,22 +8,21 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the `VHS` lifecycle and the testing helpers are now
-  asserted rather than inferred: `Buffer`, `CurrentLine` (reads the cursor's row
-  instead of the last line), `SaveOutput` (create-once + append + 80-column
-  separator), `Record` (frames appear, pause stops them, resume continues), and
-  `Start`. `VHS` and `Setup` are recorded as intentional divergences because
-  their upstream surface is browser/rod-specific.
+- **Current focus:** the ledger is fully reconciled — **every row in the pinned
+  Go tree is either `ported` or a documented `intentional_divergence`**, with no
+  `partial`, `missing`, or `in_progress` rows left. The last one closed was
+  `Evaluate`: recording now starts after the settings/output header and after an
+  initial `Hide` fast-forward, like upstream's `Record(ctx)`.
 - **Next up:**
-  1. The single remaining `partial` row is `Evaluate`: upstream starts recording
-     after the settings/output header and fast-forwards an initial `Hide` before
-     the first captured frame, while the port starts capture inside `Start`.
-     Closing it means splitting `Start` (terminal only) from a recording start
-     after the header.
-  2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
-     reviewed discovery change).
-  3. Consider the tree-sitter ID migration (378 items) as its own reviewed
-     branch once the curated ledger is fully green.
+  1. Port `serve.go`/`tty.go`/`man.go`: they are absent from the regex ledger
+     because their symbols (cobra commands, `serve_unix.go` helpers) are not in
+     the discovered kind vocabulary. Adding them means a reviewed discovery or
+     manifest change, then the usual port + spec cycle.
+  2. Capture throughput: PNG rendering is the bottleneck (~450ms for a busy
+     24x80 screen), so real tapes capture well below `Set Framerate`. A glyph
+     cache or a faster rasteriser is the next fidelity win.
+  3. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
+     branch, now that the curated ledger is green.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -149,12 +148,12 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `c63caf5` port: assert sleep/wait/render and reclassify the
   StyleOptions divergence (working tree clean at that commit).
-- **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
-  rows: 237 `ported`, 1 `partial` (`Evaluate`'s recording order), 10
-  `intentional_divergence`. No test IDs are `missing`.
-- **Gates:** `make lint` pass (37 files); `make test` `222 examples, 0
+- **Ledger: fully reconciled.** 248 rows: 238 `ported`, 10
+  `intentional_divergence`, nothing `partial`/`missing`/`in_progress`. All 17
+  upstream test IDs are `ported`.
+- **Gates:** `make lint` pass (37 files); `make test` `223 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 237 `ported`, 1 `partial`, 0 `in_progress`, 0 `missing`, 10
+  rows: 238 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 10
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.

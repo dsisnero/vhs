@@ -11,6 +11,7 @@ private def behavior_vhs : Vhs::VHS
   vhs = Vhs::VHS.new
   vhs.options = options
   vhs.start
+  vhs.begin_recording
   vhs
 end
 
