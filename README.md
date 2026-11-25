@@ -59,13 +59,18 @@ for all available commands.
 
 ### Differences from Go VHS
 
-The port renders frames headlessly: a terminal emulator replaces `ttyd` and the
-Rod browser, and each frame is drawn as a text layer plus a cursor layer, which
-ffmpeg overlays with the same filter chain Go VHS uses (window bar, border
+The runtime is the same as upstream's: `ttyd` serves xterm.js, the
+[Rod](https://github.com/dsisnero/rod) Crystal port drives a headless Chromium
+browser, and each frame is the xterm.js text and cursor canvas captured as PNG.
+ffmpeg then applies the same filter chain Go VHS uses (window bar, border
 radius, margin fill, palette for GIF). Echoed commands and error output go
 through the same lipgloss styles as upstream (`src/vhs/styles.cr`), so the
 colours follow the terminal's detected colour profile (`NO_COLOR`, `COLORTERM`,
 `TERM`).
+
+Runtime requirements therefore match upstream: a Chromium-family browser and
+`ttyd` on `PATH`. Browser-backed specs are opt-in with `VHS_SPEC_BROWSER=1` so
+the default `make test` stays dependency-free.
 
 Two CLI surfaces are intentionally not implemented:
 

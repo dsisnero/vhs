@@ -3,6 +3,10 @@
 ## Expectations
 
 - Specs live under [`spec/`](../spec).
+- Browser-backed specs drive ttyd plus a Chromium-family browser and only run
+  when enabled: `VHS_SPEC_BROWSER=1 make test`. The default suite skips them so
+  it stays fast and dependency-free; run the flagged suite before claiming
+  runtime parity.
 - Upstream Go tests and fixtures are the behavioral contract.
 - Output-sensitive changes should be validated against fixtures or generated
   images, not only type-level assertions.

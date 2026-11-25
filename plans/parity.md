@@ -8,25 +8,22 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** style, semantics, and defaults now come from the same
-  building blocks as upstream — echoed/error output renders through
-  `dsisnero/lipgloss` (`src/vhs/styles.cr`) with termenv-style profile
-  detection, `StyleOptions`/`ScreenshotOptions` have pointer semantics, and
-  `StyleOptions`/`Options` defaults are Go zero values. The ledger has no
-  `partial` or `in_progress` rows: 241 `ported`, 5 `intentional_divergence`
-  (three Go `image.Image` artifacts plus the browser-shaped `VHS`/`Setup`), and
-  2 `missing` that are pending work rather than limits (`record`, `publish`).
+- **Current focus:** the runtime now *is* upstream's architecture — ttyd serves
+  xterm.js, `dsisnero/rod` drives a headless Chromium, frames are the text and
+  cursor canvases captured as PNG, and the styles are lipgloss. That removed the
+  last architecture divergences (`VHS` fields, `Setup`, `Start`, `Record`,
+  `Buffer`, `CurrentLine`, and the synthetic input sequences from
+  `ExecuteType`/`Ctrl`/`Alt`/`Shift`/`Key`/`Paste`); `src/vhs/tty.cr` and
+  `src/vhs/keys.cr` replace the emulator and the escape-sequence synthesis.
+  Ledger: 243 `ported`, 3 `intentional_divergence` (Go's `image.Image`
+  `ColorModel` artifacts), 2 `missing` (`record`, `publish`).
 - **Next up:**
   1. Port `vhs record` (LibC PTY + raw stdin) and `vhs publish` (libssh2), the
      two rows still `missing`.
-  2. Port `serve.go`/`tty.go`/`man.go`: they are absent from the regex ledger
-     because their symbols (cobra commands, `serve_unix.go` helpers) are not in
-     the discovered kind vocabulary. Adding them means a reviewed discovery or
-     manifest change, then the usual port + spec cycle.
-  3. Capture throughput: PNG rendering is the bottleneck (~450ms for a busy
-     24x80 screen), so real tapes capture well below `Set Framerate`. A glyph
-     cache or a faster rasteriser is the next fidelity win.
-  4. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
+  2. Port `serve.go`/`man.go` (and the ledger for them): their symbols are not in
+     the regex discovery's kind vocabulary, so this needs a reviewed discovery or
+     manifest change first.
+  3. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
@@ -41,17 +38,20 @@ are*, not *how the repo works*.
     successful command while recording, and falls back to a temp file when the
     test output directory cannot be created. Copy/Paste use a process-local
     clipboard instead of the OS one.
-  - Input synthesis: `src/vhs/input.cr` owns the key→sequence mapping for
-    `Type`, plain keys, Alt, Ctrl, and Shift; the tape-level divergence is that
-    upstream types through the browser's keyboard while the headless port writes
-    the equivalent bytes to the emulator (asserted in `spec/vhs/input_spec.cr`).
+  - Input: `src/vhs/keys.cr` ports upstream `keys.go` (104 rune → `input.Key`
+    entries with the `shift` helper), and `Type`/`Ctrl`/`Alt`/`Shift`/`Key`/
+    `Paste` drive the Rod keyboard (KeyActions for modifier chains, textarea
+    input for unmapped runes), matching upstream.
+  - tty: `src/vhs/tty.cr` ports `tty.go` — random free port, the ttyd argument
+    list (canvas renderer, sixel, custom glyphs, `--once`, `--writable`), and the
+    shell command with its environment.
   - Command echo: `src/vhs/highlight.cr` ports `syntax.go::Highlight` (per-token
     option/argument styles, ENV `=`, faint hidden commands, elided source
-    prefix) with ANSI codes standing in for lipgloss, and the evaluator prints
-    through it like upstream (header in colour, hidden/ignored commands faint).
-  - Parser: all 12 `parser/parser.go` rows reconciled (`CommandType` is an
-    `intentional_divergence` because upstream's type is deadcode) and all six
-    upstream parser tests ported — `spec/vhs/parser_spec.cr` replays the
+    prefix) through the lipgloss styles, and the evaluator prints through it like
+    upstream (header in colour, hidden/ignored commands faint).
+  - Parser: all 12 `parser/parser.go` rows `ported` (`CommandType` mirrors
+    upstream's alias) and all six upstream parser tests ported —
+    `spec/vhs/parser_spec.cr` replays the
     23-command `TestParser` table, the four `TestParserErrors` strings with
     upstream line numbers, the six `TestParseCtrl` cases, the five
     `TestParseSource` and two `TestParseScreenshot` cases, and the full
@@ -96,12 +96,10 @@ are*, not *how the repo works*.
     for `Sleep`, `Wait`, `Set TypingSpeed`, and `Set WaitTimeout`; the three
     hand-rolled parsers it replaced rejected `1m` and treated unitless numbers as
     milliseconds.
-  - Frame capture: a tape's capture fiber is now always stopped (an `ensure`
-    covers every early return). Before this, a tape with an invalid setting left
-    its fiber rendering forever, which starved later tapes into "no frames" and
-    tripled suite time. PNG rendering is still the capture bottleneck: a busy
-    24x80 screen takes ~450ms per frame, so real tapes capture well below the
-    configured framerate (font resolution and font loading are cached now).
+  - Frame capture: a tape's capture fiber is always stopped (an `ensure` covers
+    every early return), and frames come from `canvas_to_image` on the xterm.js
+    layers, so the configured framerate is actually reachable (a probe captured
+    19 frames in 1.2s at 25fps).
   - Style plumbing: `StyleOptions` and `ScreenshotOptions` are classes, because
     upstream shares one `*StyleOptions` between `Options`, `Video`, and
     `Screenshot` and mutates screenshots through pointer receivers. Reference
@@ -109,14 +107,14 @@ are*, not *how the repo works*.
     removed the old `Vhs.update_style` write-back helper and the class of bugs it
     existed for (style settings only reaching one copy, screenshot bookkeeping
     being written to a discarded copy).
-  - VHS lifecycle: `Start`, `Record`, `ApplyLoopOffset`, and `Cleanup` are
-    `ported` with specs (frames appear after start, pause/resume is honoured,
-    loop offsets rename frames, cleanup removes the directories). `Setup` and
-    the `VHS` struct are `intentional_divergence` (browser/rod surface);
-    `Render` is `ported` (missing-ffmpeg and output-less paths asserted).
+  - VHS lifecycle: `Start`, `Setup`, `Record`, `ApplyLoopOffset`, and `Cleanup`
+    are `ported` with specs (ttyd + browser come up, canvases are found, frames
+    appear, pause/resume is honoured, loop offsets rename frames, cleanup removes
+    the directories). `Render` is `ported` (missing-ffmpeg and output-less paths
+    asserted).
   - Testing helpers: all four `testing.go` rows are `ported` — `Buffer` and
-    `CurrentLine` read the emulator's cursor row, and `SaveOutput` creates the
-    file once, appends later calls, and writes the 80-character separator.
+    `CurrentLine` evaluate xterm.js' buffer, and `SaveOutput` creates the file
+    once, appends later calls, and writes the 80-character separator.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
@@ -161,8 +159,8 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `29b04b8` port: remove four divergences that only needed
   porting work (working tree clean at that commit).
-- **Ledger:** 248 rows: 241 `ported`, 5 `intentional_divergence`, 2 `missing`
-  (`run`, `publish` — pending, not impossible). All 17 upstream test IDs are
+- **Ledger:** 248 rows: 243 `ported`, 3 `intentional_divergence`, 2 `missing`
+  (`record`, `publish` — pending, not impossible). All 17 upstream test IDs are
   `ported`.
 - **Gates:** `make lint` pass (39 files); `make test` `237 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
@@ -254,11 +252,11 @@ Keep this block accurate after every feature: the next session reads it first
 - `VHS#render` now runs inside `Vhs.evaluate` like upstream, so specs evaluate
   through `evaluate_without_render` (an `EvaluatorOption` that clears the outputs)
   to stay hermetic; the CLI path renders for real.
-- `vhs record` and `vhs publish` are the only two unimplemented surfaces, and
-  they are pending work rather than language limits: a PTY can be allocated
-  through LibC (`posix_openpt`/`grantpt`/`unlockpt`) and SSH through a libssh2
-  binding. `Vhs::Record.input_to_tape` (the recorder's pure core) is already
-  ported and covered by the three upstream tests.
+- `vhs record` and `vhs publish` are the only unimplemented surfaces, and they
+  are pending work rather than language limits: a PTY can be allocated through
+  LibC (`posix_openpt`/`grantpt`/`unlockpt`) and SSH through a libssh2 binding.
+  `Vhs::Record.input_to_tape` (the recorder's pure core) is already ported and
+  covered by the three upstream tests.
 - `Draw::Circle`/`Rectangle`/`RoundedRectangle` expose `alpha_at`/`bounds`
   instead of Go's `image.Image` interface (`At`/`Bounds`/`ColorModel`), so the
   three `ColorModel` rows are `intentional_divergence`. The port composites the

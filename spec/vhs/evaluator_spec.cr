@@ -23,6 +23,8 @@ module Vhs
   describe "evaluator" do
     describe ".evaluate" do
       it "executes simple tape without errors" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Sleep 0.1s
@@ -33,6 +35,8 @@ module Vhs
       end
 
       it "executes tape with Type command" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Type "Hello"
@@ -44,6 +48,8 @@ module Vhs
       end
 
       it "returns error for unknown theme" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Set Theme "UnknownTheme"
@@ -58,6 +64,8 @@ module Vhs
       end
 
       it "returns no error for valid theme" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Set Theme "Andromeda"
@@ -69,6 +77,8 @@ module Vhs
       end
 
       it "executes Hide and Show commands" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Hide
@@ -82,6 +92,8 @@ module Vhs
       end
 
       it "executes Copy and Paste commands" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Copy "Hello"
@@ -95,6 +107,8 @@ module Vhs
       end
 
       it "executes Screenshot command with .png extension" do
+        next unless browser_specs?
+
         FileUtils.mkdir_p("./temp")
         path = File.join("./temp", "screenshot.png")
         tape = <<-TAPE
@@ -109,6 +123,8 @@ module Vhs
       end
 
       it "returns error for Screenshot without .png extension" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Screenshot "test.jpg"
@@ -128,6 +144,8 @@ module Vhs
       end
 
       it "executes Ctrl command" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Ctrl+C
@@ -139,6 +157,8 @@ module Vhs
       end
 
       it "executes Alt command" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Alt+.
@@ -150,6 +170,8 @@ module Vhs
       end
 
       it "executes Shift command" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Type "cat"
@@ -164,6 +186,8 @@ module Vhs
       end
 
       it "executes key commands" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Backspace 2
@@ -197,6 +221,8 @@ module Vhs
       end
 
       it "returns error for invalid setting" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Set InvalidSetting 123
@@ -215,6 +241,8 @@ module Vhs
         FileUtils.mkdir_p(temp_dir)
 
         it "executes source with existing tape" do
+          next unless browser_specs?
+
           src_path = File.join(temp_dir, "source.tape")
           File.write(src_path, "Output test.gif\nSleep 0.1s")
           tape = <<-TAPE
@@ -228,6 +256,8 @@ module Vhs
         end
 
         it "returns error for missing tape" do
+          next unless browser_specs?
+
           src_path = File.join(temp_dir, "missing.tape")
           tape = <<-TAPE
           Output test.gif
@@ -239,6 +269,8 @@ module Vhs
         end
 
         it "returns error for non-.tape extension" do
+          next unless browser_specs?
+
           src_path = File.join(temp_dir, "source.txt")
           File.write(src_path, "")
           tape = <<-TAPE
@@ -255,6 +287,8 @@ module Vhs
 
     describe "recording order" do
       it "captures nothing while an initial Hide is in effect" do
+        next unless browser_specs?
+
         # The tape hides before recording starts and closes with Show, so no
         # frame can be captured: upstream's fast-forward means the hidden sleep
         # is not recorded, and Render then fails with "no frames".
@@ -273,6 +307,8 @@ module Vhs
 
     describe "non-style settings" do
       it "applies every remaining Set command to the options" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Set Shell bash
         Set FontFamily "JetBrains Mono"
@@ -316,6 +352,8 @@ module Vhs
       end
 
       it "rejects invalid setting values" do
+        next unless browser_specs?
+
         invalid_tapes = [
           "Set Shell nope\nOutput test.gif",
           "Set FontSize 0\nOutput test.gif",
@@ -336,6 +374,8 @@ module Vhs
 
     describe "env, loop offset, and require" do
       it "applies Env to the process environment like upstream" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Env VHS_SPEC_ENV seen
         Output test.gif
@@ -351,6 +391,8 @@ module Vhs
       end
 
       it "parses LoopOffset percentages" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Set LoopOffset 60.4%
         Output test.gif
@@ -369,6 +411,8 @@ module Vhs
       end
 
       it "requires a binary that exists in PATH" do
+        next unless browser_specs?
+
         present = "Require sh\nOutput test.gif\nSleep 0.1s"
         Vhs.evaluate(present, IO::Memory.new, drop_outputs_option).should be_empty
 
@@ -381,6 +425,8 @@ module Vhs
 
     describe "style settings" do
       it "propagates SET style commands to the video and screenshot options" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Set Width 400
@@ -423,6 +469,8 @@ module Vhs
 
     describe "EvaluatorOption" do
       it "runs after the tape's commands have been executed" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Set Theme "Catppuccin Latte"
         Output test.gif
@@ -442,6 +490,8 @@ module Vhs
       end
 
       it "can redirect the output paths before rendering" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Sleep 0.15s
@@ -462,6 +512,8 @@ module Vhs
       end
 
       it "applies multiple options in order" do
+        next unless browser_specs?
+
         tape = <<-TAPE
         Output test.gif
         Sleep 0.15s

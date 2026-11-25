@@ -1,7 +1,6 @@
-require "ultraviolet"
+require "rod"
 require "process"
 require "random/secure"
-require "./png_renderer"
 require "./ffmpeg_renderer"
 
 module Vhs
@@ -406,10 +405,9 @@ module Vhs
 
   # ExecuteType types the argument string on the running instance of vhs.
   def self.execute_type(cmd : Parser::Command, v : VHS) : Exception?
-    terminal = v.terminal
-    return Exception.new("terminal not started") unless terminal
+    page = v.page
+    return Exception.new("vhs is not started") if page.nil?
 
-    text = cmd.args
     typing_speed = v.options.typing_speed
     unless cmd.options.empty?
       parsed = Vhs.parse_duration(cmd.options)
@@ -419,15 +417,14 @@ module Vhs
       typing_speed = parsed
     end
 
-    if typing_speed > 0.milliseconds
-      # Type character by character with delay
-      text.each_char do |char|
-        terminal.write(char.to_s)
-        sleep(typing_speed)
+    cmd.args.each_char do |char|
+      if key = Keys.key_for(char)
+        page.keyboard.type(key)
+      else
+        page.element("textarea").input(char.to_s)
+        page.wait_idle(2.seconds) rescue nil
       end
-    else
-      # Type all at once
-      terminal.write(text)
+      sleep(typing_speed) if typing_speed > 0.milliseconds
     end
 
     nil
@@ -489,11 +486,10 @@ module Vhs
 
   # ExecutePaste pastes text from the clipboard.
   def self.execute_paste(_cmd : Parser::Command, v : VHS) : Exception?
-    terminal = v.terminal
-    return Exception.new("terminal not started") unless terminal
+    page = v.page
+    return Exception.new("vhs is not started") if page.nil?
 
-    text = self.clipboard
-    terminal.write(text) unless text.empty?
+    type_text(page, self.clipboard)
     nil
   end
 
@@ -578,30 +574,87 @@ module Vhs
   # ExecuteCtrl is a CommandFunc that presses the argument keys and/or modifiers
   # with the ctrl key held down on the running instance of vhs.
   def self.execute_ctrl(cmd : Parser::Command, v : VHS) : Exception?
-    terminal = v.terminal
-    return Exception.new("terminal not started") unless terminal
+    page = v.page
+    return Exception.new("vhs is not started") if page.nil?
 
-    terminal.write(Input.ctrl_sequence(cmd.args.split(' ')))
+    action = page.keyboard.key_actions.press(Rod::Input::CONTROL_LEFT)
+    keys = cmd.args.split(' ')
+
+    keys.each_with_index do |key, i|
+      input_key = ctrl_input_key(key)
+      next if input_key.nil?
+
+      # The last key is typed; the rest stay pressed until the chain ends.
+      if i == keys.size - 1
+        action.type(input_key)
+      else
+        action.press(input_key)
+      end
+    end
+
+    action.do
     nil
+  end
+
+  # ctrl_input_key resolves one link of a Ctrl chain (modifiers and named keys).
+  private def self.ctrl_input_key(key : String) : Rod::Input::Key?
+    case key
+    when "Shift"     then Rod::Input::SHIFT_LEFT
+    when "Alt"       then Rod::Input::ALT_LEFT
+    when "Enter"     then Rod::Input::ENTER
+    when "Space"     then Rod::Input::SPACE
+    when "Backspace" then Rod::Input::BACKSPACE
+    else
+      first = key[0]?
+      Keys.key_for(first) if first
+    end
   end
 
   # ExecuteAlt is a CommandFunc that presses the argument key with the alt key
   # held down on the running instance of vhs.
   def self.execute_alt(cmd : Parser::Command, v : VHS) : Exception?
-    terminal = v.terminal
-    return Exception.new("terminal not started") unless terminal
+    page = v.page
+    return Exception.new("vhs is not started") if page.nil?
 
-    terminal.write(Input.alt_sequence(cmd.args))
+    keyboard = page.keyboard
+    keyboard.press(Rod::Input::ALT_LEFT)
+    begin
+      case Token.lookup_identifier(cmd.args)
+      when Token::ENTER
+        keyboard.type(Rod::Input::ENTER)
+      when Token::TAB
+        keyboard.type(Rod::Input::TAB)
+      else
+        type_mapped_runes(keyboard, cmd.args)
+      end
+    ensure
+      keyboard.release(Rod::Input::ALT_LEFT)
+    end
+
     nil
   end
 
   # ExecuteShift is a CommandFunc that presses the argument key with the shift
   # key held down on the running instance of vhs.
   def self.execute_shift(cmd : Parser::Command, v : VHS) : Exception?
-    terminal = v.terminal
-    return Exception.new("terminal not started") unless terminal
+    page = v.page
+    return Exception.new("vhs is not started") if page.nil?
 
-    terminal.write(Input.shift_sequence(cmd.args))
+    keyboard = page.keyboard
+    keyboard.press(Rod::Input::SHIFT_LEFT)
+    begin
+      case Token.lookup_identifier(cmd.args)
+      when Token::ENTER
+        keyboard.type(Rod::Input::ENTER)
+      when Token::TAB
+        keyboard.type(Rod::Input::TAB)
+      else
+        type_mapped_runes(keyboard, cmd.args)
+      end
+    ensure
+      keyboard.release(Rod::Input::SHIFT_LEFT)
+    end
+
     nil
   end
 
@@ -848,21 +901,68 @@ module Vhs
   # (since they are repeatable and delayable) can be re-used.
   def self.execute_key(key : String) : CommandFunc
     ->(cmd : Parser::Command, v : VHS) : Exception? {
-      terminal = v.terminal
-      return Exception.new("terminal not started") unless terminal
+      page = v.page
+      return Exception.new("vhs is not started") if page.nil?
 
       # Upstream takes the repeat count from the command's args and the per-key
       # speed from its @duration option, defaulting to the global typing speed.
-      key_char = Input.key_sequence(key)
       repeat = cmd.args.to_i? || 1
       typing_speed = Vhs.parse_duration(cmd.options) || v.options.typing_speed
+      first = key[0]?
+      input_key = (first ? Keys.key_for(first) : nil) || KEY_NAMES[key]?
+
       repeat.times do
-        terminal.write(key_char)
+        if input_key
+          page.keyboard.type(input_key)
+        else
+          page.element("textarea").input(key)
+        end
         sleep(typing_speed) if typing_speed > 0.milliseconds
       end
 
       nil
     }
+  end
+
+  # KEY_NAMES maps the key commands' names to the browser input keys, mirroring
+  # the ExecuteKey(...) table upstream builds from go-rod's input package.
+  KEY_NAMES = {
+    "Enter"      => Rod::Input::ENTER,
+    "Backspace"  => Rod::Input::BACKSPACE,
+    "Delete"     => Rod::Input::DELETE,
+    "Insert"     => Rod::Input::INSERT,
+    "Tab"        => Rod::Input::TAB,
+    "Escape"     => Rod::Input::ESCAPE,
+    "Space"      => Rod::Input::SPACE,
+    "ArrowUp"    => Rod::Input::ARROW_UP,
+    "ArrowDown"  => Rod::Input::ARROW_DOWN,
+    "ArrowRight" => Rod::Input::ARROW_RIGHT,
+    "ArrowLeft"  => Rod::Input::ARROW_LEFT,
+    "PageUp"     => Rod::Input::PAGE_UP,
+    "PageDown"   => Rod::Input::PAGE_DOWN,
+    "Home"       => Rod::Input::HOME,
+    "End"        => Rod::Input::END,
+  }
+
+  # type_mapped_runes types every rune that has a browser key mapping.
+  private def self.type_mapped_runes(keyboard : Rod::Keyboard, text : String) : Nil
+    text.each_char do |char|
+      key = Keys.key_for(char)
+      keyboard.type(key) if key
+    end
+  end
+
+  # type_text types a string through the browser keyboard, falling back to the
+  # page's textarea input for runes without a key mapping (upstream ExecuteType
+  # does the same).
+  private def self.type_text(page : Rod::Page, text : String) : Nil
+    text.each_char do |char|
+      if key = Keys.key_for(char)
+        page.keyboard.type(key)
+      else
+        page.element("textarea").input(char.to_s)
+      end
+    end
   end
 
   # Keymap is the map of runes to input.Keys.
@@ -1370,15 +1470,15 @@ module Vhs
       end
     end
 
-    # Prepare the session, then start recording. Upstream calls Setup between
-    # Start and the first captured frame; the port calls it first because Start
-    # is what begins capture here.
-    if err = v.setup
+    # Start ttyd and the browser, then configure the session (upstream's
+    # Start followed by Setup). Recording starts later, after the header.
+    if err = v.start
       v.errors << err
     end
 
-    # Start VHS
-    v.start
+    if err = v.setup
+      v.errors << err
+    end
 
     # Whatever happens next, recording stops and the frame directories are
     # removed: an early return (bad setting, undersized video, failing command)
@@ -1501,145 +1601,6 @@ module Vhs
     end
   end
 
-  # TerminalEmulator provides a simple terminal emulator for running shell commands
-  # and capturing output.
-  class TerminalEmulator
-    property process : Process
-    property width : Int32
-    property height : Int32
-    property buffer : Array(Array(Char))
-    property cursor_x : Int32
-    property cursor_y : Int32
-    property output_buffer : String::Builder
-    property reader_fiber : Fiber?
-
-    def initialize(shell_cmd : String, shell_args : Array(String) = [] of String, env : Hash(String, String)? = nil)
-      @width = 80
-      @height = 24
-      @buffer = Array.new(@height) { Array.new(@width, ' ') }
-      @cursor_x = 0
-      @cursor_y = 0
-      @output_buffer = String::Builder.new
-      @reader_fiber = nil
-
-      # Start shell process with PTY
-      @process = Process.new(shell_cmd, shell_args, env: env, shell: false,
-        input: Process::Redirect::Pipe,
-        output: Process::Redirect::Pipe,
-        error: Process::Redirect::Pipe)
-
-      # Set terminal size
-      set_size(@width, @height)
-
-      # Start background reader
-      start_reader
-    end
-
-    # Write text to the terminal (simulates typing)
-    def write(text : String) : Nil
-      @process.input << text
-      @process.input.flush
-    end
-
-    # Read output from terminal
-    def read(timeout_ms : Int32 = 100) : String
-      output = Bytes.new(4096)
-      bytes_read = 0
-
-      # Try to read available output
-      begin
-        bytes_read = @process.output.read_nonblock(output)
-      rescue IO::Timeout
-        # No data available
-      end
-
-      String.new(output[0, bytes_read])
-    end
-
-    # Set terminal size
-    def set_size(width : Int32, height : Int32) : Nil
-      @width = width
-      @height = height
-      @buffer = Array.new(@height) { Array.new(@width, ' ') }
-
-      # Send resize signal to process
-      # Note: This is a simplified implementation
-      # In a real terminal emulator, we'd send SIGWINCH
-    end
-
-    # Start background reader to capture output
-    private def start_reader : Nil
-      @reader_fiber = spawn do
-        output = Bytes.new(4096)
-        loop do
-          bytes_read = @process.output.read(output)
-          break if bytes_read == 0 # EOF
-
-          chunk = String.new(output[0, bytes_read])
-          @output_buffer << chunk
-          # Also update buffer with simple handling
-          update_buffer(chunk)
-        rescue IO::Error
-          # Process likely ended
-          break
-        end
-      end
-    end
-
-    # Update buffer with output (simple implementation)
-    private def update_buffer(chunk : String) : Nil
-      # Simple handling: just append characters to current position
-      # This doesn't handle ANSI escapes properly
-      chunk.each_char do |char|
-        next if char == '\r' # Ignore carriage return
-        if char == '\n'
-          @cursor_x = 0
-          @cursor_y += 1
-          if @cursor_y >= @height
-            # Scroll
-            @buffer.shift
-            @buffer << Array.new(@width, ' ')
-            @cursor_y = @height - 1
-          end
-        elsif char == '\b' # Backspace
-          @cursor_x -= 1 if @cursor_x > 0
-          @buffer[@cursor_y][@cursor_x] = ' ' if @cursor_x >= 0 && @cursor_x < @width
-        elsif char.control?
-          # Ignore other control characters for now
-        else
-          if @cursor_x < @width && @cursor_y < @height
-            @buffer[@cursor_y][@cursor_x] = char
-            @cursor_x += 1
-          end
-        end
-      end
-    end
-
-    # Get terminal contents as text
-    def contents : String
-      @output_buffer.to_s
-    end
-
-    # Get terminal screen as lines
-    def screen_lines : Array(String)
-      lines = [] of String
-      @buffer.each do |row|
-        line = String.build do |str|
-          row.each { |char| str << char }
-        end
-        # Trim trailing spaces
-        lines << line.rstrip
-      end
-      lines
-    end
-
-    # Close the terminal
-    def close : Nil
-      @process.terminate
-      # Reader fiber will break due to IO::Error
-    end
-  end
-
   # VHS is the object that controls the setup.
   class VHS
     property options : Options
@@ -1647,11 +1608,23 @@ module Vhs
     property? started : Bool
     property? recording : Bool
     property total_frames : Int32
-    property terminal : TerminalEmulator?
+    property page : Rod::Page?
+    property browser : Rod::Browser?
+    property text_canvas : Rod::Element?
+    property cursor_canvas : Rod::Element?
+    property tty : Process?
+    property launcher : Rod::Util::Launcher::Launcher?
     property mutex : Mutex
     property frame_capture_fiber : Fiber?
-    property stop_frame_capture : Channel(Nil)?
+    property? stop_frame_capture : Bool
     property? test_output_created : Bool
+
+    # cleanupWaitTime is how long commands such as `rm` get to finish before the
+    # browser and ttyd are torn down.
+    CLEANUP_WAIT_TIME = 100.milliseconds
+
+    # quality is the PNG quality passed to the canvas capture.
+    CANVAS_QUALITY = 1.0
 
     def initialize
       # Upstream New() seeds the instance with DefaultVHSOptions, so a bare
@@ -1661,44 +1634,57 @@ module Vhs
       @started = false
       @recording = true
       @total_frames = 0
-      @terminal = nil
+      @page = nil
+      @browser = nil
+      @text_canvas = nil
+      @cursor_canvas = nil
+      @tty = nil
+      @launcher = nil
       @mutex = Mutex.new
       @frame_capture_fiber = nil
-      @stop_frame_capture = nil
+      @stop_frame_capture = false
       @test_output_created = false
     end
 
-    # Start starts ttyd, browser and everything else needed to create the gif.
-    def start : Nil
+    # Start starts ttyd, the browser, and the ttyd page.
+    #
+    # Mirrors upstream Start: pick a port, run ttyd for the configured shell,
+    # launch the browser (no sandbox when VHS_NO_SANDBOX is set, leakless off),
+    # connect, and open the ttyd URL.
+    def start : Exception?
       @mutex.lock
       begin
-        if started?
-          @errors << Exception.new("vhs is already started")
-          return
-        end
+        return Exception.new("vhs is already started") if started?
 
-        # Create terminal emulator with shell
-        shell_cmd = @options.shell.command[0]? || ""
-        shell_args = @options.shell.command[1..]
-        env_array = @options.shell.env
-        env_hash = {} of String => String
-        env_array.each do |entry|
-          if entry.includes?('=')
-            key, val = entry.split('=', 2)
-            env_hash[key] = val
-          end
-        end
-        env = env_hash.empty? ? nil : env_hash
+        port = Tty.random_port
+        @tty = Tty.start(port, @options.shell)
 
-        @terminal = TerminalEmulator.new(shell_cmd, shell_args, env)
+        launcher = Rod::Util::Launcher::Launcher.new
+        launcher.leakless(false)
+        path, found = Rod::Util::Launcher::Browser.look_path
+        launcher.bin(path.as(String)) if found && path
+        launcher.no_sandbox(true) unless ENV["VHS_NO_SANDBOX"]?.nil?
+        control_url = launcher.launch
+        @launcher = launcher
 
-        # Ensure video input directory exists
+        browser = Rod::Browser.new
+        browser.connect(control_url)
+        @browser = browser
+
+        url = "http://localhost:#{port}"
+        @page = browser.page(url)
+
+        # Wait until xterm.js attached `window.term`, like upstream.
+        @page.try(&.wait(Rod::EvalOptions.new(js: "() => window.term != undefined")))
+
         ensure_input_dir
-
         @started = true
+        nil
       ensure
         @mutex.unlock
       end
+    rescue ex
+      ex
     end
 
     # begin_recording starts capturing frames. Upstream starts recording after
@@ -1716,11 +1702,28 @@ module Vhs
         return unless @started
         @recording = false
         stop_frame_capture
-        @terminal.try(&.close)
+        terminate
         @started = false
       ensure
         @mutex.unlock
       end
+    end
+
+    # terminate tears down the browser and ttyd, giving in-flight commands a
+    # moment to finish first (upstream's cleanupWaitTime).
+    def terminate : Nil
+      sleep CLEANUP_WAIT_TIME
+      @browser.try(&.close)
+      @launcher.try(&.kill)
+      tty = @tty
+      if tty
+        tty.terminate rescue nil
+        @tty = nil
+      end
+      @page = nil
+      @browser = nil
+      @text_canvas = nil
+      @cursor_canvas = nil
     end
 
     # Ensure video input directory exists
@@ -1731,85 +1734,63 @@ module Vhs
     end
 
     # Start frame capture loop
-    private def start_frame_capture : Nil
+    def start_frame_capture : Nil
       # The recording flag is checked per frame, not here: upstream starts the
       # recorder and lets Hide/Show gate the captures inside the loop.
       return if @frame_capture_fiber
 
-      framerate = @options.video.framerate
-      frame_interval = 1.0 / framerate
-      stop_channel = Channel(Nil).new
-      @stop_frame_capture = stop_channel
+      interval = 1.second / @options.video.framerate
+      @stop_frame_capture = false
 
       @frame_capture_fiber = spawn do
         loop do
-          sleep frame_interval
-          select
-          when stop_channel.receive
-            break
-          else
-            # Capture frame
-            capture_frame
-          end
+          break if stop_frame_capture?
+          sleep interval
+          break if stop_frame_capture?
+          next unless @recording
+
+          capture_frame
         end
       end
     end
 
     # Stop frame capture loop
-    private def stop_frame_capture : Nil
-      if stop = @stop_frame_capture
-        stop.send(nil) rescue nil
-        @stop_frame_capture = nil
-      end
+    def stop_frame_capture : Nil
+      @stop_frame_capture = true
       @frame_capture_fiber = nil
     end
 
-    # Captures one frame as the text and cursor layers ffmpeg overlays.
-    private def capture_frame : Nil
-      term = @terminal
-      return unless term
-      return unless @recording
+    # Captures one frame by reading the xterm.js text and cursor canvases, like
+    # upstream's Record.
+    def capture_frame : Nil
+      page = @page
+      return unless page
 
-      # A blank terminal is still a frame: upstream captures the canvas whatever
-      # it shows, and an empty line buffer must not stall the frame sequence.
-      buffer = term.buffer
-      buffer = Array.new(term.height) { Array.new(term.width, ' ') } if buffer.empty?
+      cursor_canvas = @cursor_canvas
+      text_canvas = @text_canvas
+      return if cursor_canvas.nil? || text_canvas.nil?
 
-      opts = @options
+      cursor = cursor_canvas.canvas_to_image("image/png", CANVAS_QUALITY)
+      text = text_canvas.canvas_to_image("image/png", CANVAS_QUALITY)
+
       frame_num = @total_frames + 1
-      text_path = File.join(opts.video.input, sprintf(TEXT_FRAME_FORMAT, frame_num))
-      cursor_path = File.join(opts.video.input, sprintf(CURSOR_FRAME_FORMAT, frame_num))
-
-      ::Vhs::PNGRenderer.render(buffer, text_path,
-        font_family: opts.font_family,
-        font_size: opts.font_size,
-        letter_spacing: opts.letter_spacing,
-        line_height: opts.line_height,
-        foreground: opts.theme.foreground,
-        background: opts.theme.background
-      )
-
-      ::Vhs::PNGRenderer.render_cursor(buffer, cursor_path,
-        cursor_x: term.cursor_x,
-        cursor_y: term.cursor_y,
-        font_family: opts.font_family,
-        font_size: opts.font_size,
-        letter_spacing: opts.letter_spacing,
-        line_height: opts.line_height,
-        cursor_color: opts.theme.cursor
-      )
+      input = @options.video.input
+      File.write(File.join(input, sprintf(CURSOR_FRAME_FORMAT, frame_num)), cursor)
+      File.write(File.join(input, sprintf(TEXT_FRAME_FORMAT, frame_num)), text)
 
       @total_frames += 1
+
       # Capture the current frame and disable frame capturing, like upstream
       # Record does after writing both layers.
       @options.screenshot.make_screenshot(@total_frames) if @options.screenshot.frame_capture?
+    rescue ex
+      @errors << ex
     end
 
     # Close stops recording and cleans up resources
     def close : Nil
       stop_frame_capture
-      term = @terminal
-      term.try(&.close) if term
+      terminate
       @started = false
       @recording = false
     end
@@ -1854,20 +1835,50 @@ module Vhs
       nil
     end
 
-    # Setup prepares the terminal session once the settings have run.
+    # Setup configures the browser session once the settings have run.
     #
-    # Upstream sets the browser viewport, finds the xterm canvases, applies the
-    # terminal options, and re-creates the frame directory. The headless port has
-    # no viewport, canvas, or xterm options; the frame directory reset is what
-    # carries over, and it runs before capture starts (the emulator's buffer size
-    # is fixed rather than fitted to the video dimensions).
+    # Mirrors upstream Setup: size the viewport to fit padding, margins, and the
+    # window bar; find the xterm.js text and cursor canvases; push the terminal
+    # options; fit the terminal; and re-create the frames directory.
     def setup : Exception?
-      input = @options.video.input
+      page = @page
+      return Exception.new("vhs is not started") if page.nil?
+
+      style = @options.style
+      padding = style.padding
+      margin = style.margin_fill.empty? ? 0 : style.margin
+      bar = style.window_bar.empty? ? 0 : style.window_bar_size
+      width = style.width - padding * 2 - margin * 2
+      height = style.height - padding * 2 - margin * 2 - bar
+
+      page.set_viewport(
+        Cdp::Emulation::SetDeviceMetricsOverride.new(
+          width: width.to_i64,
+          height: height.to_i64,
+          device_scale_factor: 0.0,
+          mobile: false
+        )
+      )
+
+      @text_canvas = page.element("canvas.xterm-text-layer")
+      @cursor_canvas = page.element("canvas.xterm-cursor-layer")
+
+      options = @options
+      page.eval(
+        "() => { term.options = { fontSize: #{options.font_size}, " \
+        "fontFamily: '#{options.font_family}', letterSpacing: #{options.letter_spacing}, " \
+        "lineHeight: #{options.line_height}, theme: #{options.theme.to_json}, " \
+        "cursorBlink: #{options.cursor_blink?} } }"
+      )
+      page.eval("term.fit")
+
+      input = options.video.input
       unless input.empty?
         remove_tree(input)
         Dir.mkdir_p(input)
         File.chmod(input, 0o750)
       end
+
       nil
     rescue ex
       ex
@@ -1905,21 +1916,37 @@ module Vhs
       end
     end
 
-    # Buffer returns the current terminal buffer lines.
+    # Buffer returns the current terminal buffer lines, trimmed at the end, read
+    # from xterm.js like upstream.
     def buffer : Array(String)
-      term = @terminal
-      return [] of String unless term
-      term.screen_lines
+      page = @page
+      return [] of String unless page
+
+      result = page.eval(
+        "() => Array(term.rows).fill(0).map((e, i) => " \
+        "term.buffer.active.getLine(i).translateToString().trimEnd())"
+      )
+      values = result.value.try(&.as_a?) || [] of JSON::Any
+      values.map(&.as_s)
+    rescue ex
+      @errors << ex
+      [] of String
     end
 
     # CurrentLine returns the line the cursor is on, trimmed at the end, like
     # upstream's cursorY + viewportY lookup.
     def current_line : String
-      lines = buffer
-      return "" if lines.empty?
+      page = @page
+      return "" unless page
 
-      index = @terminal.try(&.cursor_y) || (lines.size - 1)
-      lines[index]? || ""
+      result = page.eval(
+        "() => term.buffer.active.getLine(term.buffer.active.cursorY+" \
+        "term.buffer.active.viewportY).translateToString().trimEnd()"
+      )
+      result.value.try(&.as_s?) || ""
+    rescue ex
+      @errors << ex
+      ""
     end
 
     # SaveOutput appends the current buffer plus a separator to the test output

@@ -3,6 +3,8 @@ require "../spec_helper"
 module Vhs
   describe "evaluator test" do
     it "returns error for invalid setting" do
+      next unless browser_specs?
+
       tape = <<-TAPE
       Set InvalidSetting 123
       TAPE
@@ -16,6 +18,8 @@ module Vhs
     end
 
     it "returns no error for valid setting" do
+      next unless browser_specs?
+
       tape = <<-TAPE
       Output test.gif
       Set FontSize 16

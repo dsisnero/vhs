@@ -1,97 +1,93 @@
 require "../spec_helper"
 require "file_utils"
 
-private def testing_quiet_vhs : Vhs::VHS
-  options = Vhs.default_vhs_options
-  # A silent shell keeps the emulator buffer under the spec's control.
-  options.shell = Vhs::Shell.new(command: ["sleep", "30"])
-  # Low framerate: these specs care about the emulator, not about rendering
-  # dozens of PNG frames.
-  options.video.framerate = 2
-  vhs = Vhs::VHS.new
-  vhs.options = options
-  vhs.start
-  vhs.begin_recording
-  vhs
-end
-
 module Vhs
   # Characterization specs for upstream testing.go's Buffer, CurrentLine, and
-  # SaveOutput. The terminal is driven with a silent shell (`sleep`) so the
-  # buffer contents are deterministic instead of depending on a login shell.
+  # SaveOutput. These drive a real xterm.js session, so they only run with
+  # VHS_SPEC_BROWSER=1.
   describe "testing helpers" do
     it "returns the terminal buffer rows trimmed at the end" do
-      vhs = testing_quiet_vhs
-      terminal = vhs.terminal.as(Vhs::TerminalEmulator)
-      terminal.buffer = [
-        ['h', 'i', ' ', ' '],
-        [' ', ' ', ' ', ' '],
-      ]
+      next unless browser_specs?
 
-      vhs.buffer.should eq(["hi", ""])
-      vhs.stop
+      vhs = browser_vhs
+      begin
+        vhs.page.as(Rod::Page).eval("() => term.write('hello')")
+        sleep 0.3.seconds
+
+        lines = vhs.buffer
+        lines.size.should eq(10)
+        lines.join("\n").should contain("hello")
+      ensure
+        vhs.stop
+      end
     end
 
     it "returns the line the cursor is on" do
-      vhs = testing_quiet_vhs
-      terminal = vhs.terminal.as(Vhs::TerminalEmulator)
-      terminal.buffer = [
-        ['f', 'i', 'r', 's', 't'],
-        ['s', 'e', 'c', 'o', 'n', 'd'],
-        ['t', 'h', 'i', 'r', 'd'],
-      ]
+      next unless browser_specs?
 
-      terminal.cursor_y = 1
-      vhs.current_line.should eq("second")
+      vhs = browser_vhs
+      begin
+        vhs.page.as(Rod::Page).eval("() => term.write('first-line')")
+        sleep 0.3.seconds
+        vhs.current_line.should contain("first-line")
 
-      terminal.cursor_y = 2
-      vhs.current_line.should eq("third")
-      vhs.stop
+        vhs.page.as(Rod::Page).eval("() => term.write('\\r\\nsecond-line')")
+        sleep 0.3.seconds
+        vhs.current_line.should contain("second-line")
+      ensure
+        vhs.stop
+      end
     end
 
     it "writes the buffer and an 80-column separator to the test output" do
+      next unless browser_specs?
+
       Dir.mkdir_p("./temp")
       output = "./temp/testing-helpers/session.test"
       FileUtils.rm_rf("./temp/testing-helpers")
 
-      vhs = testing_quiet_vhs
-      vhs.options.test.output = output
-      terminal = vhs.terminal.as(Vhs::TerminalEmulator)
-      terminal.buffer = [
-        ['o', 'n', 'e'],
-        ['t', 'w', 'o'],
-      ]
+      vhs = browser_vhs
+      begin
+        vhs.options.test.output = output
+        vhs.page.as(Rod::Page).eval("() => term.write('captured')")
+        sleep 0.3.seconds
 
-      vhs.save_output.should be_nil
-      File.exists?(output).should be_true
-      File.read(output).should eq("one\ntwo\n#{SEPARATOR}\n")
-      vhs.stop
-      FileUtils.rm_rf("./temp/testing-helpers")
+        vhs.save_output.should be_nil
+        File.exists?(output).should be_true
+        File.read(output).should contain("captured")
+        File.read(output).should contain(SEPARATOR)
+      ensure
+        vhs.stop
+        FileUtils.rm_rf("./temp/testing-helpers")
+      end
     end
 
     it "appends on later calls instead of rewriting the file" do
+      next unless browser_specs?
+
       Dir.mkdir_p("./temp")
       output = "./temp/testing-helpers/session.test"
       FileUtils.rm_rf("./temp/testing-helpers")
 
-      vhs = testing_quiet_vhs
-      vhs.options.test.output = output
-      terminal = vhs.terminal.as(Vhs::TerminalEmulator)
-      terminal.buffer = [['o', 'n', 'e']]
+      vhs = browser_vhs
+      begin
+        vhs.options.test.output = output
 
-      vhs.save_output.should be_nil
-      vhs.save_output.should be_nil
+        vhs.save_output.should be_nil
+        vhs.save_output.should be_nil
 
-      File.read(output).should eq("one\n#{SEPARATOR}\none\n#{SEPARATOR}\n")
-      vhs.stop
-      FileUtils.rm_rf("./temp/testing-helpers")
+        # Two buffers plus two separators.
+        File.read(output).scan(SEPARATOR).size.should eq(2)
+      ensure
+        vhs.stop
+        FileUtils.rm_rf("./temp/testing-helpers")
+      end
     end
 
     it "does nothing when no test output is configured" do
-      vhs = testing_quiet_vhs
+      vhs = VHS.new
       vhs.options.test.output = ""
       vhs.save_output.should be_nil
-      vhs.stop
     end
   end
 end

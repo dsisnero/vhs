@@ -3,6 +3,8 @@ require "../spec_helper"
 module Vhs
   describe "evaluator simple" do
     it "executes simple tape without errors" do
+      next unless browser_specs?
+
       tape = <<-TAPE
       Output test.gif
       Sleep 0.1s

@@ -119,6 +119,8 @@ module Vhs
       end
 
       it "prints parser output for a tape that fails to parse" do
+        next unless browser_specs?
+
         tape = "Bogus 3\n"
         errors = evaluate_without_render(tape)
         errors.size.should eq(1)

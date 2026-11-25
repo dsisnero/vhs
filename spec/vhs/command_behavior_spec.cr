@@ -3,14 +3,17 @@ require "file_utils"
 
 private def behavior_vhs : Vhs::VHS
   options = Vhs.default_vhs_options
-  # A silent shell keeps the emulator buffer free of prompt output.
+  # A silent shell keeps the terminal free of prompt output.
   options.shell = Vhs::Shell.new(command: ["sleep", "30"])
-  # Low framerate: these specs care about the emulator, not about rendering
-  # dozens of PNG frames.
+  options.style.width = 640
+  options.style.height = 320
+  options.style.padding = 20
+  options.style.background_color = Vhs::BACKGROUND
   options.video.framerate = 2
   vhs = Vhs::VHS.new
   vhs.options = options
-  vhs.start
+  vhs.start.should be_nil
+  vhs.setup.should be_nil
   vhs.begin_recording
   vhs
 end
@@ -26,6 +29,7 @@ module Vhs
   describe "command behavior" do
     describe "Execute" do
       it "wraps command failures with upstream's prefix" do
+        next unless browser_specs?
         vhs = behavior_vhs
         error = Vhs.execute(behavior_command(Token::SET, "FontSize", "nope"), vhs)
 
@@ -35,6 +39,7 @@ module Vhs
       end
 
       it "falls back to a temporary file when the output directory cannot be created" do
+        next unless browser_specs?
         vhs = behavior_vhs
         # Upstream writes to a temp file instead of failing when mkdir fails.
         vhs.options.test.output = "/dev/null/nope/session.test"
@@ -44,6 +49,7 @@ module Vhs
       end
 
       it "reports a missing command function" do
+        next unless browser_specs?
         vhs = behavior_vhs
         Vhs.execute(behavior_command(Token::BOOLEAN, "", "true"), vhs)
           .to_s.should contain("no command function")
@@ -53,6 +59,7 @@ module Vhs
 
     describe "ExecuteOutput" do
       it "routes every extension to the matching output" do
+        next unless browser_specs?
         tape = <<-TAPE
         Output demo.gif
         Output demo.mp4
@@ -84,6 +91,7 @@ module Vhs
 
     describe "ExecuteCopy and ExecutePaste" do
       it "stores the arguments in the clipboard and leaves Paste a no-op when empty" do
+        next unless browser_specs?
         vhs = behavior_vhs
         Vhs.clipboard = ""
 
@@ -99,6 +107,7 @@ module Vhs
 
     describe "ExecuteHide and ExecuteShow" do
       it "toggles the recording flag" do
+        next unless browser_specs?
         vhs = behavior_vhs
 
         Vhs.execute(behavior_command(Token::HIDE), vhs).should be_nil
@@ -112,6 +121,7 @@ module Vhs
 
     describe "ExecuteSleep" do
       it "sleeps for the parsed duration" do
+        next unless browser_specs?
         vhs = behavior_vhs
         started = Time.instant
 
@@ -124,6 +134,7 @@ module Vhs
 
     describe "ExecuteWait" do
       it "gives up after the command's timeout" do
+        next unless browser_specs?
         vhs = behavior_vhs
         started = Time.instant
 
@@ -139,6 +150,7 @@ module Vhs
       end
 
       it "rejects an unknown scope" do
+        next unless browser_specs?
         vhs = behavior_vhs
         command = behavior_command(Token::WAIT, "20ms", "Window /x/")
 
@@ -177,6 +189,7 @@ module Vhs
 
     describe "ExecuteScreenshot" do
       it "arms the next frame and records it in the screenshots map" do
+        next unless browser_specs?
         vhs = behavior_vhs
         path = "./temp/command-behavior/shot.png"
         FileUtils.rm_rf("./temp/command-behavior")
@@ -200,6 +213,7 @@ module Vhs
       end
 
       it "rejects a missing path" do
+        next unless browser_specs?
         vhs = behavior_vhs
         Vhs.execute(behavior_command(Token::SCREENSHOT), vhs)
           .to_s.should contain("Screenshot path is required")
