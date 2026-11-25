@@ -288,7 +288,7 @@ module Vhs
           nil
         end
 
-        Vhs.evaluate(tape, IO::Memory.new, inspect_style).should be_empty
+        Vhs.evaluate(tape, IO::Memory.new, inspect_style, drop_outputs_option).should be_empty
         inspected.should be_true
       end
     end
@@ -307,7 +307,7 @@ module Vhs
           nil
         end
 
-        errors = Vhs.evaluate(tape, IO::Memory.new, option)
+        errors = Vhs.evaluate(tape, IO::Memory.new, option, drop_outputs_option)
 
         errors.should be_empty
         seen_theme.should eq("Catppuccin Latte")
@@ -329,7 +329,7 @@ module Vhs
           nil
         end
 
-        Vhs.evaluate(tape, IO::Memory.new, redirect, capture).should be_empty
+        Vhs.evaluate(tape, IO::Memory.new, redirect, capture, drop_outputs_option).should be_empty
         captured.should eq("redirected.gif")
       end
 
@@ -349,7 +349,7 @@ module Vhs
           nil
         end
 
-        Vhs.evaluate(tape, IO::Memory.new, first, second).should be_empty
+        Vhs.evaluate(tape, IO::Memory.new, first, second, drop_outputs_option).should be_empty
         calls.should eq(["first", "second"])
       end
     end
