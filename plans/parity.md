@@ -8,23 +8,26 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the runtime now *is* upstream's architecture — ttyd serves
-  xterm.js, `dsisnero/rod` drives a headless Chromium, frames are the text and
-  cursor canvases captured as PNG, and the styles are lipgloss. That removed the
-  last architecture divergences (`VHS` fields, `Setup`, `Start`, `Record`,
-  `Buffer`, `CurrentLine`, and the synthetic input sequences from
-  `ExecuteType`/`Ctrl`/`Alt`/`Shift`/`Key`/`Paste`); `src/vhs/tty.cr` and
-  `src/vhs/keys.cr` replace the emulator and the escape-sequence synthesis.
-  Ledger: 243 `ported`, 3 `intentional_divergence` (Go's `image.Image`
-  `ColorModel` artifacts), 2 `missing` (`record`, `publish`).
+- **Current focus:** the last two `missing` rows are ported, so every ledger row
+  is now accounted for. `vhs record` runs the shell on a POSIX
+  pseudo-terminal (`src/vhs/pty.cr`: `posix_openpt`/`grantpt`/`unlockpt` plus
+  `termios` raw mode), mirrors stdin into the tape buffer and the pty, and prints
+  what `input_to_tape` makes of it; `vhs publish` streams the GIF to
+  `ghost.charm.sh` with the system OpenSSH client, keeping upstream's Ed25519 key
+  and `known_hosts` files in the platform data directory. The CLI now dispatches
+  subcommands (`record`, `publish`) and applies `-o` through an
+  `EvaluatorOption` instead of the previous TODO no-op. Ledger: 245 `ported`,
+  3 `intentional_divergence`, 0 `missing`.
 - **Next up:**
-  1. Port `vhs record` (LibC PTY + raw stdin) and `vhs publish` (libssh2), the
-     two rows still `missing`.
-  2. Port `serve.go`/`man.go` (and the ledger for them): their symbols are not in
+  1. Port `serve.go`/`man.go` (and the ledger for them): their symbols are not in
      the regex discovery's kind vocabulary, so this needs a reviewed discovery or
      manifest change first.
-  3. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
+  2. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
+  3. Port the remaining upstream subcommands (`new`, `themes`, `validate`, and
+     cobra's `--version`/help shapes). They are not ledger rows — `main.go` and
+     `embed.go` are outside the regex discovery — but `sorted_theme_names` and
+     the parser error printer they need are already ported.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -118,10 +121,22 @@ are*, not *how the repo works*.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
-  - CLI: file + flags (`-o`, `-q`, `-p`, `-v`, `-h`, stdin) are ported;
-    `vhs record` and `vhs publish` are documented intentional divergences
-    (README "Differences from Go VHS"). `serve`/`tty`/`man` are not ported and
-    not yet in the ledger.
+  - CLI: the root command (`-o`, `-q`, `-p`, `-v`, `-h`, file/stdin), the
+    `record` subcommand (`-s/--shell`) and the `publish` subcommand (`-q`) are
+    ported, dispatched on `args.first?` instead of through cobra. `-o` applies
+    the outputs through an `EvaluatorOption` and `-p`/`VHS_PUBLISH=true`
+    publishes the resulting GIF, both like upstream main.go. `serve`/`tty`/`man`
+    are not ported and not yet in the ledger.
+  - Recorder: `Vhs.record` starts the shell on a pty and prints the tape; the
+    tape watcher that inserts `Sleep` lines runs in a fiber that is stopped when
+    the recording ends (upstream leaks its goroutine), and the child is not a
+    session leader (Crystal exposes no pre-exec hook), which is visible only as
+    bash's "no job control in this shell" banner in the recording terminal.
+  - Publish: the SSH transport is the system `ssh` client (and `ssh-keygen` for
+    the first key) rather than a linked SSH library, so `vhs publish` needs them
+    on `PATH`; `-F /dev/null` keeps the user's ssh_config out of the picture and
+    `StrictHostKeyChecking=accept-new` reproduces upstream's
+    `hostKeyCallback`.
 - **Scoping notes / gotchas:**
   - The ledger is a **regex** ledger. `PARITY_PARSER=tree-sitter` works here
     (toolchain `v0.3.4` is installed) but discovers 378 Go items instead of 248
@@ -157,14 +172,13 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `2838339` port: run on ttyd + Rod like upstream, delete the
-  headless emulator (working tree clean at that commit).
-- **Ledger:** 248 rows: 243 `ported`, 3 `intentional_divergence`, 2 `missing`
-  (`record`, `publish` — pending, not impossible). All 17 upstream test IDs are
-  `ported`.
-- **Gates:** `make lint` pass (39 files); `make test` `237 examples, 0
+- **Last commit:** `c16c839` port: refresh parity resume block after the
+  browser-runtime migration (working tree clean at that commit).
+- **Ledger:** 248 rows: 245 `ported`, 3 `intentional_divergence`, 0 `missing`.
+  All 17 upstream test IDs are `ported`.
+- **Gates:** `make lint` pass (43 files); `make test` `253 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 238 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 10
+  rows: 245 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 3
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -222,8 +236,9 @@ Keep this block accurate after every feature: the next session reads it first
 
 - [x] `syntax.go` (`Highlight` + the evaluator's echo/warn/dimension checks)
 - [x] `testing.go::DefaultTestOptions` (no `vhs test` command exists upstream)
-- [x] `record.go` / `publish.go` recorded as intentional divergences and
-      documented in the README
+- [x] `record.go::Record` (pty + raw mode in `src/vhs/pty.cr`) and
+      `publish.go::Publish` (OpenSSH transport), plus the `record`/`publish`
+      subcommands, `-o` output overrides, and the `-p` publish path
 - [ ] `serve.go` / `tty.go` (server + tty handling, `serve_unix.go` first)
 - [ ] `man.go`
 - [ ] Evaluate `token/token.go` native tree-sitter migration as a separate
@@ -252,11 +267,23 @@ Keep this block accurate after every feature: the next session reads it first
 - `VHS#render` now runs inside `Vhs.evaluate` like upstream, so specs evaluate
   through `evaluate_without_render` (an `EvaluatorOption` that clears the outputs)
   to stay hermetic; the CLI path renders for real.
-- `vhs record` and `vhs publish` are the only unimplemented surfaces, and they
-  are pending work rather than language limits: a PTY can be allocated through
-  LibC (`posix_openpt`/`grantpt`/`unlockpt`) and SSH through a libssh2 binding.
-  `Vhs::Record.input_to_tape` (the recorder's pure core) is already ported and
-  covered by the three upstream tests.
+- `Vhs.record` spawns the shell with the pty slave as its stdio but without
+  `setsid`/`TIOCSCTTY` (Crystal's `Process` exposes no pre-exec hook, unlike
+  creack/pty), so an interactive bash prints "no job control in this shell" to
+  the recording terminal. The generated tape is identical.
+- `Vhs.record` stops the tape watcher when a recording ends, where upstream
+  leaks the goroutine because the process exits immediately; the inserted `Sleep`
+  lines are the same. Its shell and IO parameters exist because cobra hands
+  upstream globals, and they let specs drive a real recording.
+- `LibC.ioctl` is declared variadic in `src/vhs/pty.cr`: with a fixed prototype
+  the arm64 macOS ABI passes the argument pointer where `va_arg` never looks, so
+  every terminal-size request silently succeeded without changing anything.
+- `Vhs.publish` shells out to the system `ssh`/`ssh-keygen` instead of linking
+  libssh2. Same key file, `known_hosts`, host-key policy, and GIF-on-stdin
+  exchange; `-F /dev/null` stands in for upstream's config-less SSH client.
+- `Vhs::Pty::Session#close` only closes the master. Upstream never waits for the
+  recorded shell either, and on macOS closing the master does not wake a blocked
+  slave reader, so waiting there would hang.
 - `Draw::Circle`/`Rectangle`/`RoundedRectangle` expose `alpha_at`/`bounds`
   instead of Go's `image.Image` interface (`At`/`Bounds`/`ColorModel`), so the
   three `ColorModel` rows are `intentional_divergence`. The port composites the

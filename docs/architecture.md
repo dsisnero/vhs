@@ -25,6 +25,12 @@ Current port status, area-by-area progress, and the ordered backlog live in
   ffmpeg commands (upstream's `draw.go`, `ffmpeg.go`, `video.go`).
 - `src/vhs/styles.cr` holds the lipgloss styles that colour the command echo and
   error output (upstream's `style.go`).
+- `src/vhs/record.cr` + `src/vhs/pty.cr` implement `vhs record`: the POSIX
+  pseudo-terminal (`posix_openpt`, `termios` raw mode) and the keystroke-to-tape
+  conversion of upstream's `record.go` + creack/pty.
+- `src/vhs/publish.cr` implements `vhs publish` (upstream's `publish.go`) and
+  `src/vhs.cr` is the CLI: the root command plus the `record` and `publish`
+  subcommands that upstream main.go registers with cobra.
 - `vendor/vhs` remains the source of truth for API behavior, edge cases,
   fixtures, and tests.
 

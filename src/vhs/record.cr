@@ -1,3 +1,4 @@
+require "./pty"
 require "./token"
 
 module Vhs
@@ -97,6 +98,151 @@ module Vhs
     end
   end
 
+  # default_record_shell is the default shell for `vhs record`: the basename of
+  # $SHELL, falling back to the port's DEFAULT_SHELL.
+  #
+  # Upstream uses cobra's `filepath.Base(os.Getenv("SHELL"))` and then compares
+  # the result with "", which filepath.Base never returns; an unset $SHELL
+  # therefore yields "." on Go. The port falls back to the default shell, which
+  # is what that code was reaching for.
+  def self.default_record_shell : String
+    shell = ENV["SHELL"]?.try { |value| File.basename(value) }
+    return DEFAULT_SHELL if shell.nil? || shell.empty?
+
+    shell
+  end
+
+  # record starts a pseudo-terminal for the user to begin writing to, records all
+  # key presses on stdin, and writes the equivalent Tape commands to `output`:
+  #
+  #     vhs record > file.tape
+  #
+  # `input` is the terminal being recorded; `terminal_output` receives the
+  # recorded shell's output, which upstream sends to stderr so that stdout stays
+  # reserved for the tape. `log` is where non-fatal warnings go (`os.Stderr` in
+  # upstream, through `log.Printf`).
+  #
+  # Upstream has no parameters (cobra hands it globals); they exist here so the
+  # recorder can be driven from specs without taking over the test terminal.
+  def self.record(shell : String = default_record_shell,
+                  *,
+                  input : IO = STDIN,
+                  output : IO = STDOUT,
+                  terminal_output : IO = STDERR,
+                  log : IO = STDERR) : Nil
+    session = Pty.start(shell, {"VHS_RECORD" => "true"})
+
+    if Term.terminal?(input) && !session.inherit_size(input)
+      log.puts "error resizing pty: could not copy the window size"
+    end
+
+    previous_state = make_raw(input)
+
+    # We'll need to display the stdin on the screen but we'll also need a copy to
+    # analyze later and create a tape file.
+    tape = IO::Memory.new
+
+    if shell != DEFAULT_SHELL
+      tape << "#{Token::SET} Shell #{shell}\n"
+    end
+
+    stop = Channel(Nil).new
+    stopped = Channel(Nil).new
+    spawn_insert_sleeps(tape, stop, stopped)
+
+    # Write to the buffer and PTY's stdin and stderr so that stdout is reserved
+    # for the output tape file.
+    spawn_copy(input, tape, session)
+
+    begin
+      copy_terminal(session, terminal_output)
+    ensure
+      stop.send(nil)
+      stopped.receive
+      session.close
+      restore(input, previous_state)
+    end
+
+    output.puts input_to_tape(tape.to_s)
+  end
+
+  # spawn_insert_sleeps ports upstream's tape-watcher goroutine: whenever the
+  # tape has not grown for SLEEP_THRESHOLD, it appends a Sleep command.
+  #
+  # Upstream leaks the goroutine because the process exits right after a
+  # recording; the port stops it, so a second recording in the same process
+  # cannot keep writing into the first one's tape.
+  private def self.spawn_insert_sleeps(tape : IO::Memory, stop : Channel(Nil), stopped : Channel(Nil)) : Nil
+    spawn do
+      length = tape.size
+      loop do
+        select
+        when stop.receive
+          break
+        when timeout(SLEEP_THRESHOLD)
+          if length == tape.size
+            # Tape has not changed in a while, write a Sleep command.
+            tape << "\n#{Token::SLEEP}\n"
+          end
+          length = tape.size
+        end
+      end
+      stopped.send(nil)
+    end
+  end
+
+  # spawn_copy mirrors `io.Copy(io.MultiWriter(tape, terminal), os.Stdin)`: every
+  # key press is recorded and also typed into the shell.
+  private def self.spawn_copy(input : IO, tape : IO::Memory, session : Pty::Session) : Nil
+    spawn do
+      buffer = Bytes.new(4096)
+      begin
+        while (read = input.read(buffer)) > 0
+          chunk = buffer[0, read]
+          tape.write(chunk)
+          session.write(chunk)
+        end
+      rescue IO::Error
+        # The shell can exit before the last keystroke is typed; upstream's
+        # io.Copy discards that error as well.
+      end
+    end
+  end
+
+  # copy_terminal echoes the recorded shell until the pty reaches end of file,
+  # which is when the shell exits.
+  private def self.copy_terminal(session : Pty::Session, terminal_output : IO) : Nil
+    buffer = Bytes.new(4096)
+    while (read = session.read(buffer)) > 0
+      begin
+        terminal_output.write(buffer[0, read])
+        terminal_output.flush
+      rescue IO::Error
+        # The recording terminal can go away while the shell is still running.
+        break
+      end
+    end
+  end
+
+  # make_raw puts the recording terminal in raw mode and returns the previous
+  # state. A stdin that is not a terminal (a pipe, as in specs) has no line
+  # discipline to disable, so it is left alone where upstream would fail.
+  private def self.make_raw(input : IO) : LibC::Termios?
+    fd = input.as?(IO::FileDescriptor)
+    return nil if fd.nil? || !Term.terminal?(fd)
+
+    Term.raw(fd)
+  end
+
+  private def self.restore(input : IO, state : LibC::Termios?) : Nil
+    return if state.nil?
+
+    fd = input.as?(IO::FileDescriptor)
+    return if fd.nil?
+
+    Term.restore(fd, state)
+  end
+
   # input_to_tape takes input from a PTY stdin and converts it into a tape file.
   def self.input_to_tape(input : String) : String
     # If the user exited the shell by typing exit don't record this in the
@@ -118,7 +264,7 @@ module Vhs
 
     s = s.gsub("\n\n", "\n")
 
-    sanitized = String::Builder.new
+    sanitized = IO::Memory.new
     lines = s.split("\n", remove_empty: false)
 
     i = 0
