@@ -101,8 +101,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `c3b8a9d` port: port the upstream lexer tests and reconcile
-  lexer/lexer.go (working tree clean at that commit).
+- **Last commit:** `7f174c4` port: reconcile parser/parser.go and port the six
+  upstream parser tests (working tree clean at that commit).
 - **Ledger `missing` rows left (62), by file:** `ffmpeg.go` 16, `vhs.go` 13,
   `draw.go` 11, `video.go` 6, `testing.go` 5, `themes.go` 4, `screenshot.go` 3,
   `record.go` 1, `shell.go` 1, `publish.go` 1, `syntax.go` 1. No test IDs are
