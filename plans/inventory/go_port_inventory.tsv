@@ -101,15 +101,15 @@ parser/parser_test.go::test::TestParseTapeFile	test	ported	spec/vhs/parser_spec.
 parser/parser_test.go::test::TestParser	test	ported	spec/vhs/parser_spec.cr:129	Ports the upstream tape and all 23 expected {type, options, args} commands verbatim.
 parser/parser_test.go::test::TestParserErrors	test	ported	spec/vhs/parser_spec.cr:196	Ports the upstream input (including its leading newline, so errors land on lines 2/4/5/5) and all four rendered error strings.
 publish.go::func::Publish	func	missing	-	auto-generated
-record.go::func::Record	func	missing	-	auto-generated
+record.go::func::Record	func	missing	src/vhs/record.cr:101	Not ported: the reference implementation has only input_to_tape (asserted by the ported record tests); the recorder entry point that captures tty output belongs to the `vhs record` CLI surface in Phase 4.
 record_test.go::test::TestInputToTape	test	ported	spec/vhs/record_spec.cr:4	Crystal mirrors the upstream input-to-tape conversion scenarios for control sequences, repeated navigation keys, and compressed command output.
 record_test.go::test::TestInputToTapeLongSleep	test	ported	spec/vhs/record_spec.cr:92	Crystal covers the upstream long-sleep compression case and matches the expected aggregated duration output.
 record_test.go::test::TestInputToTape_RepeatedSleepAfterExit	test	ported	spec/vhs/record_spec.cr:102	Crystal covers the upstream post-exit sleep handling and preserves the expected exit plus aggregated sleep output.
-screenshot.go::func::MakeScreenshots	func	missing	-	auto-generated
-screenshot.go::func::NewScreenshotOptions	func	missing	-	auto-generated
-screenshot.go::struct::ScreenshotOptions	struct	missing	-	auto-generated
+screenshot.go::func::MakeScreenshots	func	missing	-	Not ported: frame-to-screenshot ffmpeg command building (buildFFopts over StreamBuilder/ScreenshotFilterComplexBuilder) does not exist yet; the per-frame bookkeeping side does.
+screenshot.go::func::NewScreenshotOptions	func	ported	src/vhs/evaluator.cr:1311, spec/vhs/screenshot_spec.cr:6	ScreenshotOptions.new(input:, style:) seeds frame_capture=false, empty next path, empty screenshot map; the spec drives it through make_screenshot/enable_frame_capture.
+screenshot.go::struct::ScreenshotOptions	struct	ported	src/vhs/evaluator.cr:1311, spec/vhs/screenshot_spec.cr:6	Same five fields (frame capture flag, next path, screenshots map, input, style); make_screenshot and enable_frame_capture are asserted.
 screenshot_test.go::test::TestScreenshot	test	ported	spec/vhs/screenshot_spec.cr:4	Crystal covers screenshot capture toggling and screenshot frame bookkeeping through ScreenshotOptions.make_screenshot and enable_frame_capture.
-shell.go::struct::Shell	struct	missing	-	auto-generated
+shell.go::struct::Shell	struct	ported	src/vhs/evaluator.cr:1352, spec/vhs_spec.cr:56	Same command/env fields, and spec/vhs_spec.cr asserts the bash command/env pair plus Shell.new's sh default alongside the SHELLS keys.
 style.go::const::Background	const	ported	src/vhs/evaluator.cr:9, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Background, asserted against the Crystal constant.
 style.go::const::Black	const	ported	src/vhs/evaluator.cr:11, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Black, asserted against the Crystal constant.
 style.go::const::Blue	const	ported	src/vhs/evaluator.cr:19, spec/vhs/style_spec.cr:8	Same hex value as upstream theme constant Blue, asserted against the Crystal constant.
@@ -132,15 +132,15 @@ style.go::const::Yellow	const	ported	src/vhs/evaluator.cr:17, spec/vhs/style_spe
 style.go::func::DefaultStyleOptions	func	ported	src/vhs/evaluator.cr:1520, spec/vhs/style_spec.cr:53	All ten fields assert upstream DefaultStyleOptions values, including MarginFill/WindowBarColor/BackgroundColor from DefaultTheme.Background.
 style.go::struct::StyleOptions	struct	partial	src/vhs/evaluator.cr:1259, spec/vhs/style_spec.cr:53	Same ten fields as upstream StyleOptions and every field is asserted through default_style_options; divergence: bare StyleOptions.new defaults to the DefaultStyleOptions numbers (1200/600/60/30) where a Go zero value is 0/"", which only affects struct defaults, not the DefaultVHSOptions path.
 syntax.go::func::Highlight	func	missing	-	auto-generated
-testing.go::func::DefaultTestOptions	func	missing	-	auto-generated
-testing.go::method::VHS.Buffer	method	missing	-	auto-generated
-testing.go::method::VHS.CurrentLine	method	missing	-	auto-generated
-testing.go::method::VHS.SaveOutput	method	missing	-	auto-generated
-testing.go::struct::TestOptions	struct	missing	-	auto-generated
-themes.go::method::Theme.String	method	missing	-	auto-generated
-themes.go::method::ThemeNotFoundError.Error	method	missing	-	auto-generated
-themes.go::struct::Theme	struct	missing	-	auto-generated
-themes.go::struct::ThemeNotFoundError	struct	missing	-	auto-generated
+testing.go::func::DefaultTestOptions	func	missing	-	Not ported: upstream returns TestOptions{Output: "out.test"} for the `vhs test` surface, which is still Phase 4 CLI work. TestOptions.new stays at Go's zero value (empty output), which is what DefaultVHSOptions uses.
+testing.go::method::VHS.Buffer	method	partial	src/vhs/evaluator.cr:1960	Returns TerminalEmulator screen lines instead of evaluating xterm.js; no error return, and it is only exercised indirectly (FakeWaitVHS overrides it for the Wait specs).
+testing.go::method::VHS.CurrentLine	method	partial	src/vhs/evaluator.cr:1967	Returns the last buffered line; cursor-position tracking is still a TODO, so it does not match upstream's cursorY+viewportY line selection.
+testing.go::method::VHS.SaveOutput	method	partial	src/vhs/evaluator.cr:1975	Appends the buffer plus the 80-char separator to TestOptions.output and creates the parent directory, but without upstream's sync.Once file handle and without asserting in a spec yet.
+testing.go::struct::TestOptions	struct	ported	src/vhs/evaluator.cr:1344, spec/vhs_spec.cr:83	Same output field; spec asserts the zero value used by DefaultVHSOptions.
+themes.go::method::Theme.String	method	ported	src/vhs/evaluator.cr:1364, spec/vhs_spec.cr:71	Theme includes JSON::Serializable, so Theme#to_json emits the same xterm.js key set (background, brightBlack, cursorAccent, ...); the spec round-trips DEFAULT_THEME. Divergence: Go falls back to DefaultTheme JSON on marshal error, which cannot fail here.
+themes.go::method::ThemeNotFoundError.Error	method	ported	src/vhs/evaluator.cr:183, spec/vhs/command_spec.cr:78	Crystal uses Exception#message; the 'invalid `Set Theme ...`: did you mean ...' text is asserted verbatim in command_spec, along with the suggestion list in themes_spec.
+themes.go::struct::Theme	struct	ported	src/vhs/evaluator.cr:1364, spec/vhs_spec.cr:71	All 22 upstream fields with the same JSON keys; asserted by the DEFAULT_THEME constants spec and the JSON round trip.
+themes.go::struct::ThemeNotFoundError	struct	ported	src/vhs/evaluator.cr:183, spec/vhs/command_spec.cr:78	Carries the requested theme name and the suggestions like upstream; asserted through command_spec and themes_spec.
 themes_test.go::test::TestFindAllThemes	test	ported	spec/vhs/themes_spec.cr:5	Crystal verifies that sorted_theme_names loads the full upstream theme set and matches the expected count.
 themes_test.go::test::TestFindTheme	test	ported	spec/vhs/themes_spec.cr:13, spec/vhs/command_spec.cr:57	Crystal covers exact-match, suggestion, no-match, single-character, empty-string, JSON, invalid JSON, and unknown-theme resolution paths.
 token/token.go::const::ALT	const	ported	src/vhs/token.cr:33, spec/vhs/token_spec.cr:153	Same value as the upstream token constant; asserted by the full 77-constant table.
@@ -229,19 +229,19 @@ token/token.go::method::Type.String	method	ported	src/vhs/token.cr:229, spec/vhs
 token/token.go::struct::Token	struct	ported	src/vhs/token.cr:101, spec/vhs/token_spec.cr:267	Same four fields (type, literal, line, column); the spec asserts construction and the debug string.
 token/token.go::type::Type	type	ported	src/vhs/token.cr:5, spec/vhs/token_spec.cr:153	Divergence: upstream Type is a string type, the port aliases Symbol. Values are identical, so only string construction and Type.String differ (covered by to_human_readable).
 token/token_test.go::test::TestToCamel	test	ported	spec/vhs/token_spec.cr:221	Upstream TestToCamel's two cases (SIMPLE -> Simple, MULTIPLE_WORDS -> MultipleWords) are asserted verbatim.
-vhs.go::func::DefaultVHSOptions	func	missing	-	auto-generated
-vhs.go::func::New	func	missing	-	auto-generated
-vhs.go::method::VHS.ApplyLoopOffset	method	missing	-	auto-generated
-vhs.go::method::VHS.Cleanup	method	missing	-	auto-generated
-vhs.go::method::VHS.PauseRecording	method	missing	-	auto-generated
-vhs.go::method::VHS.Record	method	missing	-	auto-generated
-vhs.go::method::VHS.Render	method	missing	-	auto-generated
-vhs.go::method::VHS.ResumeRecording	method	missing	-	auto-generated
-vhs.go::method::VHS.ScreenshotNextFrame	method	missing	-	auto-generated
-vhs.go::method::VHS.Setup	method	missing	-	auto-generated
-vhs.go::method::VHS.Start	method	missing	-	auto-generated
-vhs.go::struct::Options	struct	missing	-	auto-generated
-vhs.go::struct::VHS	struct	missing	-	auto-generated
+vhs.go::func::DefaultVHSOptions	func	ported	src/vhs/evaluator.cr:1538, spec/vhs_spec.cr:4	Vhs.default_vhs_options sets the same 15 fields as upstream (fonts, sizes, typing speed, default shell, DEFAULT_THEME, cursor blink, 15s wait timeout, />$/ wait pattern); spec/vhs_spec.cr asserts each one and the style plumbing into video/screenshot.
+vhs.go::func::New	func	ported	src/vhs/evaluator.cr:1804, spec/vhs_spec.cr:44	VHS#initialize now seeds Vhs.default_vhs_options like upstream New, and starts with recording=true, started=false, no errors; asserted in spec/vhs_spec.cr.
+vhs.go::method::VHS.ApplyLoopOffset	method	missing	-	Not ported: VHS#render carries the TODO and skips it. Needs the frame-renaming pass (cursor/text frames + totalFrames) once the renderer builders land.
+vhs.go::method::VHS.Cleanup	method	missing	-	Not ported: nothing removes Video.Input or Screenshot.input frame directories after rendering, so they leak. Upstream Cleanup() does both.
+vhs.go::method::VHS.PauseRecording	method	ported	src/vhs/evaluator.cr:1796, spec/vhs/evaluator_spec.cr:69	Modelled as the recording? property (upstream's flag behind a mutex); ExecuteHide flips it and the Hide/Show tape spec asserts the transition.
+vhs.go::method::VHS.Record	method	partial	src/vhs/evaluator.cr:1875, src/vhs/evaluator.cr:1908	Crystal runs a fiber loop (start_frame_capture/capture_frame) that snapshots the TerminalEmulator and renders PNG frames through PNGRenderer, instead of capturing xterm.js canvases over a context channel with an error channel; frame counting and the screenshot hook are present.
+vhs.go::method::VHS.Render	method	partial	src/vhs/evaluator.cr:1949	Delegates to FFmpegRenderer, but skips ApplyLoopOffset (TODO) and the per-screenshot commands, and swallows subprocess output like upstream.
+vhs.go::method::VHS.ResumeRecording	method	ported	src/vhs/evaluator.cr:1796, spec/vhs/evaluator_spec.cr:69	Same recording? property as PauseRecording; ExecuteShow resumes capture and the Hide/Show spec covers it.
+vhs.go::method::VHS.ScreenshotNextFrame	method	ported	src/vhs/evaluator.cr:1337, spec/vhs/screenshot_spec.cr:25	Crystal spells it ScreenshotOptions#enable_frame_capture; asserted to set the flag and the next path.
+vhs.go::method::VHS.Setup	method	missing	-	Not ported: there is no browser viewport, canvas lookup, xterm options eval, or terminal fit; TerminalEmulator#set_size is the only sizing path, and nothing removes/recreates the frame input directory.
+vhs.go::method::VHS.Start	method	partial	src/vhs/evaluator.cr:1818	Crystal starts a TerminalEmulator, ensures the input directory, and starts frame capture; it has no ttyd, browser launch, or rod page, which is the architectural divergence of the headless port.
+vhs.go::struct::Options	struct	ported	src/vhs/evaluator.cr:1469, spec/vhs_spec.cr:4	Same 15 option fields (shell..style) with upstream types; defaults are asserted through default_vhs_options. Divergence: the bare struct default uses /^$/ for wait_pattern where Go's zero value is a nil regexp.
+vhs.go::struct::VHS	struct	partial	src/vhs/evaluator.cr:1792	Same options/errors/started/recording/total_frames state, but the port has a TerminalEmulator, mutex, and frame-capture fiber instead of Page/browser/TextCanvas/CursorCanvas/tty.
 video.go::func::DefaultVideoOptions	func	missing	-	auto-generated
 video.go::func::MakeGIF	func	missing	-	auto-generated
 video.go::func::MakeMP4	func	missing	-	auto-generated

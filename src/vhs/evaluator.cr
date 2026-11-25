@@ -1801,7 +1801,9 @@ module Vhs
     property stop_frame_capture : Channel(Nil)?
 
     def initialize
-      @options = Options.new
+      # Upstream New() seeds the instance with DefaultVHSOptions, so a bare
+      # VHS.new already carries the default shell, fonts, and video paths.
+      @options = Vhs.default_vhs_options
       @errors = [] of Exception
       @started = false
       @recording = true

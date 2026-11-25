@@ -8,21 +8,25 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** ledger reconciliation is done for every block whose code
-  already existed (`command.go`, `style.go`, `error.go`, `evaluator.go`,
-  `token/token.go`, `lexer/lexer.go`, `parser/parser.go`) and all 17 upstream
-  test IDs are `ported`. What is left is genuinely unported behavior:
-  the renderer (`ffmpeg.go`, `video.go`, `draw.go`), `vhs.go`, `testing.go`,
-  and the CLI surfaces.
+- **Current focus:** the ledger now reflects reality for every file: 159 rows
+  `ported`, 23 `partial`, 23 `in_progress`, 41 `missing`, 2
+  `intentional_divergence`, and no test ID is missing. The 41 missing rows are
+  concentrated in the renderer (`ffmpeg.go` 16, `draw.go` 11, `video.go` 6,
+  `screenshot.go::MakeScreenshots`) plus CLI-level behavior (`publish`,
+  `syntax`, `record`, `testing::DefaultTestOptions`) and three `VHS` lifecycle
+  methods (`Setup`, `Cleanup`, `ApplyLoopOffset`).
 - **Next up:**
-  1. Reconcile the remaining small source rows: `vhs.go` (13), `testing.go` (5),
-     `themes.go` (4), `screenshot.go` (3), `record.go` (1), `shell.go` (1).
-  2. Port `ffmpeg.go`'s filter/stream builders (16 rows) — `video.go` (6) and
-     `draw.go` (11) belong to the same pass, since today
-     `src/vhs/ffmpeg_renderer.cr` builds ffmpeg arguments ad hoc with no spec
-     coverage, and `draw.go`'s window bar / border-radius masks are absent.
+  1. Port `ffmpeg.go`'s filter/stream builders (16 rows) with `video.go` (6) and
+     `draw.go` (11) in the same pass: today `src/vhs/ffmpeg_renderer.cr` builds
+     args ad hoc with no spec coverage, and `draw.go`'s window bar /
+     border-radius masks are absent. That pass also unblocks
+     `screenshot.go::MakeScreenshots`, `VHS#ApplyLoopOffset`, and
+     `VHS#Cleanup`.
+  2. Port the remaining `VHS` lifecycle gaps: `Setup` (terminal/viewport
+     sizing after the settings run) and the frame-capture parity items.
   3. Port the remaining CLI surfaces: `publish.go`, `serve.go`, `tty.go`,
-     `syntax.go`, `testing.go`, `man.go`.
+     `syntax.go`, `testing.go`, `man.go`, and `record.go`'s recorder entry
+     point.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -63,9 +67,19 @@ are*, not *how the repo works*.
     ported as styles: `ErrorStyle`/`LineNumberStyle` became the ANSI constants in
     `src/vhs/error.cr`, and the rest still land with `syntax.go`/`highlight`.
   - Renderers: `png_renderer.cr` has spec coverage; `ffmpeg_renderer.cr` is
-    unverified and does not mirror upstream's builders.
-  - Record / screenshot / themes: upstream tests ported (8 `ported` test rows).
-  - CLI, publish, serve, tty, man: not ported.
+    unverified and does not mirror upstream's builders (`ffmpeg.go` 16,
+    `draw.go` 11, `video.go` 6 still `missing`).
+  - VHS lifecycle: `Start` and `Render` are `partial` (headless terminal
+    emulator + PNG frames instead of ttyd/rod canvases); `Setup`, `Cleanup`, and
+    `ApplyLoopOffset` are `missing`. `VHS.new` now seeds
+    `Vhs.default_vhs_options` like upstream `New`, asserted in
+    `spec/vhs_spec.cr` alongside the full default-options table, the shell
+    table, and the theme JSON shape.
+  - Testing helpers: `TestOptions` / `Buffer` / `CurrentLine` / `SaveOutput` are
+    `partial` (screen-line based, no cursor tracking, no `DefaultTestOptions`).
+  - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
+    `MakeScreenshots` is the remaining screenshot gap.
+  - CLI, publish, serve, tty, man, record entry point: not ported.
 - **Scoping notes / gotchas:**
   - The ledger is a **regex** ledger. `PARITY_PARSER=tree-sitter` works here
     (toolchain `v0.3.4` is installed) but discovers 378 Go items instead of 248
@@ -103,13 +117,14 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `7f174c4` port: reconcile parser/parser.go and port the six
   upstream parser tests (working tree clean at that commit).
-- **Ledger `missing` rows left (62), by file:** `ffmpeg.go` 16, `vhs.go` 13,
-  `draw.go` 11, `video.go` 6, `testing.go` 5, `themes.go` 4, `screenshot.go` 3,
-  `record.go` 1, `shell.go` 1, `publish.go` 1, `syntax.go` 1. No test IDs are
-  `missing` any more.
-- **Gates:** `make lint` pass (24 files); `make test` `118 examples, 0
+- **Ledger `missing` rows left (41), by file:** `ffmpeg.go` 16, `draw.go` 11,
+  `video.go` 6, `vhs.go` 3 (`Setup`, `Cleanup`, `ApplyLoopOffset`),
+  `testing.go` 1 (`DefaultTestOptions`), `screenshot.go` 1 (`MakeScreenshots`),
+  `record.go` 1, `publish.go` 1, `syntax.go` 1. No test IDs are `missing` any
+  more.
+- **Gates:** `make lint` pass (24 files); `make test` `126 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 145 `ported`, 16 `partial`, 23 `in_progress`, 62 `missing`, 2
+  rows: 159 `ported`, 23 `partial`, 23 `in_progress`, 41 `missing`, 2
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -131,8 +146,10 @@ Keep this block accurate after every feature: the next session reads it first
       keyword
 - [x] Reconcile `lexer/lexer.go` (3) and port both upstream lexer tests
 - [x] Reconcile `parser/parser.go` (12) and port its six upstream tests
-- [ ] Reconcile `vhs.go` (13), `draw.go` (11), `themes.go` (4),
-      `screenshot.go` (3), `record.go`, `shell.go` rows
+- [x] Reconcile `vhs.go` (13), `themes.go` (4), `screenshot.go` (3),
+      `testing.go` (5), `record.go`, `shell.go` rows against the port's actual
+      surface (the three `VHS` lifecycle methods stay `missing`)
+- [ ] Reconcile `draw.go` (11), `video.go` (6) with the renderer pass
 - [ ] Regenerate `go_source_parity.tsv` and confirm `make inventory`
 
 ## Phase 2 — Upstream tests still unmapped
@@ -195,6 +212,9 @@ Keep this block accurate after every feature: the next session reads it first
 - `Vhs.print_error` guards the tape line lookup (`lines[line - 1]?`) where
   upstream panics on an out-of-range line number; the printed gutter is
   identical for valid lines.
+- `Vhs::Options.new` defaults `wait_pattern` to `/^$/` where Go's zero value is
+  a nil regexp; only bare struct defaults are affected, and
+  `Vhs.default_vhs_options` uses the upstream `/>$/` pattern.
 - `Vhs::StyleOptions.new` initializes every field to the `DefaultStyleOptions`
   numbers (1200/600/60/30) with empty color strings, whereas Go's zero value is
   `0`/`""` for all fields. Only bare struct defaults are affected;
