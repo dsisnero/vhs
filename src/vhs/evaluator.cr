@@ -362,15 +362,22 @@ module Vhs
   # Execute executes a command on a running instance of vhs.
   def self.execute(cmd : Parser::Command, v : VHS) : Exception?
     func = command_funcs[cmd.type]?
-    if func
-      err = func.call(cmd, v)
-      if err.nil? && v.recording? && !v.options.test.output.empty?
-        err = v.save_output
-      end
-      err
-    else
-      Exception.new("no command function for #{cmd.type}")
+    return Exception.new("no command function for #{cmd.type}") if func.nil?
+
+    # Upstream wraps both failure sources: the command itself and the test
+    # output flush that follows a successful command while recording.
+    if err = func.call(cmd, v)
+      # Keep the original as the cause, like Go's %w wrapping.
+      return Exception.new("failed to execute command: #{err.message}", cause: err)
     end
+
+    if v.recording? && !v.options.test.output.empty?
+      if err = v.save_output
+        return Exception.new("failed to save output: #{err.message}", cause: err)
+      end
+    end
+
+    nil
   end
 
   # ExecuteNoop is a no-op command that does nothing.
@@ -1817,8 +1824,15 @@ module Vhs
 
       @total_frames += 1
       # Capture the current frame and disable frame capturing, like upstream
-      # Record does after writing both layers.
-      opts.screenshot.make_screenshot(@total_frames) if opts.screenshot.frame_capture?
+      # Record does after writing both layers. ScreenshotOptions is a struct, so
+      # the update has to be written back onto the options.
+      if @options.screenshot.frame_capture?
+        screenshot = @options.screenshot
+        screenshot.make_screenshot(@total_frames)
+        options = @options
+        options.screenshot = screenshot
+        @options = options
+      end
     end
 
     # Close stops recording and cleans up resources
@@ -1946,7 +1960,13 @@ module Vhs
       return nil if output_path.empty?
 
       dir = File.dirname(output_path)
-      FileUtils.mkdir_p(dir) unless dir.empty? || Dir.exists?(dir)
+      begin
+        FileUtils.mkdir_p(dir) unless dir.empty? || Dir.exists?(dir)
+      rescue ex
+        # Upstream falls back to a temporary file when the output directory
+        # cannot be created.
+        output_path = File.tempname("vhs-", ".txt")
+      end
 
       separator = SEPARATOR
       mode = @test_output_created ? "a" : "w"

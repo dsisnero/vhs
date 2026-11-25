@@ -52,7 +52,9 @@ module Vhs
 
         errors = evaluate_without_render(tape)
         errors.should_not be_empty
-        errors.any?(Vhs::ThemeNotFoundError).should be_true
+        # Execute wraps failures but keeps the original as the cause, like Go's %w.
+        errors.first.message.to_s.should contain("failed to execute command:")
+        errors.first.cause.is_a?(Vhs::ThemeNotFoundError).should be_true
       end
 
       it "returns no error for valid theme" do

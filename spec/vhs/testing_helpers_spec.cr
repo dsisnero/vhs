@@ -5,6 +5,9 @@ private def testing_quiet_vhs : Vhs::VHS
   options = Vhs.default_vhs_options
   # A silent shell keeps the emulator buffer under the spec's control.
   options.shell = Vhs::Shell.new(command: ["sleep", "30"])
+  # Low framerate: these specs care about the emulator, not about rendering
+  # dozens of PNG frames.
+  options.video.framerate = 2
   vhs = Vhs::VHS.new
   vhs.options = options
   vhs.start

@@ -15,11 +15,9 @@ are*, not *how the repo works*.
   `Start`. `VHS` and `Setup` are recorded as intentional divergences because
   their upstream surface is browser/rod-specific.
 - **Next up:**
-  1. The remaining 12 `partial` rows: `Execute` error wrapping,
-     `ExecuteCopy`/`ExecutePaste` clipboard content, `ExecuteOutput`'s extension
-     matrix, `ExecuteScreenshot`, `ExecuteHide`/`ExecuteShow`, `ExecuteSleep`
-     elapsed time, `ExecuteWait` timeout/Screen scope, `VHS#Render` under a
-     failing ffmpeg, `Evaluate`'s ordering, and the `StyleOptions` struct
+  1. The remaining 5 `partial` rows: `ExecuteSleep` elapsed time,
+     `ExecuteWait`'s timeout/Screen scope, `VHS#Render` under a failing ffmpeg,
+     `Evaluate`'s recording-order divergence, and the `StyleOptions` struct
      defaults.
   2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
      reviewed discovery change).
@@ -33,6 +31,11 @@ are*, not *how the repo works*.
     ported — `spec/vhs/lexer_spec.cr` now replays the 81-expectation
     `TestNextToken` tape and the 199-expectation `all.tape` fixture table
     (checked in as `spec/fixtures/all.tape`).
+  - Command execution: `Vhs.execute` wraps failures like upstream (keeping the
+    original as the exception cause), flushes the test output after each
+    successful command while recording, and falls back to a temp file when the
+    test output directory cannot be created. Copy/Paste use a process-local
+    clipboard instead of the OS one.
   - Input synthesis: `src/vhs/input.cr` owns the key→sequence mapping for
     `Type`, plain keys, Alt, Ctrl, and Shift; the tape-level divergence is that
     upstream types through the browser's keyboard while the headless port writes
@@ -146,11 +149,11 @@ are*, not *how the repo works*.
 - **Last commit:** `a63cda1` port: extract input synthesis and fix key repeats
   and per-Type speed (working tree clean at that commit).
 - **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
-  rows: 227 `ported`, 12 `partial`, 9 `intentional_divergence`. No test IDs are
+  rows: 234 `ported`, 5 `partial`, 9 `intentional_divergence`. No test IDs are
   `missing`.
-- **Gates:** `make lint` pass (36 files); `make test` `209 examples, 0
+- **Gates:** `make lint` pass (37 files); `make test` `217 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 227 `ported`, 12 `partial`, 0 `in_progress`, 0 `missing`, 9
+  rows: 234 `ported`, 5 `partial`, 0 `in_progress`, 0 `missing`, 9
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
