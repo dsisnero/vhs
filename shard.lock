@@ -17,10 +17,6 @@ shards:
     git: https://github.com/dsisnero/cellwrap.git
     version: 0.1.0+git.commit.d898f154af8cdf6ac85cfc72a24f4a354be3d88b
 
-  cml:
-    git: https://github.com/dsisnero/cml.git
-    version: 0.5.0+git.commit.52ca259420a04e37a40cb12aa56674148ef13760
-
   colorful:
     git: https://github.com/dsisnero/colorful.git
     version: 0.1.0+git.commit.f6fbe31e048dab06783e34b82f52d7527763f7eb
@@ -28,10 +24,6 @@ shards:
   crimage:
     git: https://github.com/naqvis/crimage.git
     version: 1.0.4+git.commit.b65f67df27f4cb8807a34d94a90dfd4162acf45a
-
-  easyclip:
-    git: https://github.com/kojix2/easyclip.git
-    version: 0.1.1
 
   event_handler:
     git: https://github.com/crystallabs/event_handler.git
@@ -53,10 +45,6 @@ shards:
     git: https://github.com/dsisnero/mosaic.git
     version: 0.1.0+git.commit.afef1373e37de29845d762daf31b12f93c05f153
 
-  nucleoc:
-    git: https://github.com/dsisnero/nucleoc.git
-    version: 0.1.0+git.commit.2bc7f15384e9dd9da04258d784756dbf2b75c701
-
   pluto:
     git: https://github.com/phenopolis/pluto.git
     version: 1.0.1
@@ -76,10 +64,6 @@ shards:
   stumpy_png:
     git: https://github.com/stumpycr/stumpy_png.git
     version: 5.0.1
-
-  term2:
-    git: https://github.com/dsisnero/term2.git
-    version: 0.5.0+git.commit.bafdc6a162032abe577ce2f37a36907f0e016add
 
   terminfo: # Overridden
     git: https://github.com/dsisnero/terminfo.git

@@ -17,9 +17,6 @@ dependencies:
     branch: main
   similar:
     github: dsisnero/similar.cr
-  term2:
-    github: dsisnero/term2
-    branch: v2-exp
   golden:
     github: dsisnero/golden
   colorful:

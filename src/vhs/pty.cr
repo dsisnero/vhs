@@ -151,10 +151,9 @@ module Vhs
     extend self
 
     # terminal? reports whether the IO is a terminal, like
-    # term.IsTerminal/isatty.
+    # term.IsTerminal/isatty. Crystal's IO::FileDescriptor#tty? is that isatty.
     def terminal?(io : IO) : Bool
-      fd = io.as?(IO::FileDescriptor)
-      !fd.nil? && LibC.isatty(fd.fd) == 1
+      io.as?(IO::FileDescriptor).try(&.tty?) || false
     end
 
     # raw puts the terminal into raw mode and returns the previous state, like

@@ -155,6 +155,17 @@ are*, not *how the repo works*.
     sidecars next to every file. They break spec discovery and make git print
     `non-monotonic index .../._pack-*.idx`. Run `make sidecars` (every gate
     already depends on it).
+  - `term2` was removed from `shard.yml`: nothing required it, it has no
+    pseudo-terminal support, and its only trace was a TODO. The dead `KEYMAP`
+    rune table in `evaluator.cr` (superseded by `src/vhs/keys.cr`) went with it,
+    and the lock lost three entries nothing referenced (`cml`, `easyclip`,
+    `nucleoc`).
+  - No shard provides pty allocation: `ansi` never touches `LibC`, `ultraviolet`
+    only reads `TIOCGWINSZ` (through a fixed-arity `ioctl`) and keeps raw mode
+    private to its TUI `Terminal`, and `bubbletea.cr` delegates to ultraviolet
+    while owning the controlling terminal. `src/vhs/pty.cr` stands in for
+    upstream's `creack/pty` + `golang.org/x/term` dependencies; `Term.terminal?`
+    uses stdlib `IO::FileDescriptor#tty?` rather than binding `isatty` again.
   - `shard.override.yml` is required: `ultraviolet` (pinned) still depends on
     `docelic/terminfo`, which was deleted upstream; the override points at the
     maintained `dsisnero/terminfo` fork.
