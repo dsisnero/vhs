@@ -8,11 +8,14 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the ledger is fully reconciled — **every row in the pinned
-  Go tree is either `ported` or a documented `intentional_divergence`**, with no
-  `partial`, `missing`, or `in_progress` rows left. The last one closed was
-  `Evaluate`: recording now starts after the settings/output header and after an
-  initial `Hide` fast-forward, like upstream's `Record(ctx)`.
+- **Current focus:** style, semantics, and defaults now come from the same
+  building blocks as upstream — echoed/error output renders through
+  `dsisnero/lipgloss` (`src/vhs/styles.cr`) with termenv-style profile
+  detection, `StyleOptions`/`ScreenshotOptions` have pointer semantics, and
+  `StyleOptions`/`Options` defaults are Go zero values. The ledger has no
+  `partial` or `in_progress` rows: 241 `ported`, 5 `intentional_divergence`
+  (three Go `image.Image` artifacts plus the browser-shaped `VHS`/`Setup`), and
+  2 `missing` that are pending work rather than limits (`record`, `publish`).
 - **Next up:**
   1. Port `vhs record` (LibC PTY + raw stdin) and `vhs publish` (libssh2), the
      two rows still `missing`.
@@ -156,8 +159,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `f85753c` port: close Evaluate — record after the header and
-  the Hide fast-forward (working tree clean at that commit).
+- **Last commit:** `29b04b8` port: remove four divergences that only needed
+  porting work (working tree clean at that commit).
 - **Ledger:** 248 rows: 241 `ported`, 5 `intentional_divergence`, 2 `missing`
   (`run`, `publish` — pending, not impossible). All 17 upstream test IDs are
   `ported`.
