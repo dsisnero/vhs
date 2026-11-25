@@ -28,6 +28,9 @@ Current port status, area-by-area progress, and the ordered backlog live in
 - `src/vhs/record.cr` + `src/vhs/pty.cr` implement `vhs record`: the POSIX
   pseudo-terminal (`posix_openpt`, `termios` raw mode) and the keystroke-to-tape
   conversion of upstream's `record.go` + creack/pty.
+- `src/vhs_record_shell.cr` is the separate `vhs-record-shell` launcher a recorded
+  shell is started through: it does `setsid`/`TIOCSCTTY`/window size and then
+  `exec`s the shell, which is the work Crystal's `Process` cannot do in the child.
 - `src/vhs/publish.cr` implements `vhs publish` (upstream's `publish.go`) and
   `src/vhs.cr` is the CLI: the root command plus the `record` and `publish`
   subcommands that upstream main.go registers with cobra.

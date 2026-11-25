@@ -40,6 +40,40 @@ module Vhs
 
     TIOCGWINSZ = {% if flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) || flag?(:netbsd) %} 0x40087468_u64 {% else %} 0x5413_u64 {% end %}
     TIOCSWINSZ = {% if flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) || flag?(:netbsd) %} 0x80087467_u64 {% else %} 0x5414_u64 {% end %}
+    TIOCGPGRP  = {% if flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) || flag?(:netbsd) %} 0x40047477_u64 {% else %} 0x540F_u64 {% end %}
+    TIOCSCTTY  = {% if flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) || flag?(:netbsd) %} 0x20007461_u64 {% else %} 0x540E_u64 {% end %}
+
+    # HELPER_NAME is the launcher that gives the recorded shell its own session
+    # and controlling terminal (src/vhs_record_shell.cr).
+    HELPER_NAME = "vhs-record-shell"
+
+    @@helper_path : String? = nil
+
+    # helper_path is the launcher to run: a value set by the caller or the
+    # environment ($VHS_RECORD_HELPER), else the copy next to the running binary,
+    # else one on PATH.
+    def helper_path : String
+      @@helper_path ||= find_helper
+    end
+
+    def helper_path=(path : String?) : Nil
+      @@helper_path = path
+    end
+
+    private def find_helper : String
+      if override = ENV["VHS_RECORD_HELPER"]?
+        return override
+      end
+
+      if exe = Process.executable_path
+        sibling = File.join(File.dirname(exe), HELPER_NAME)
+        return sibling if File::Info.executable?(sibling)
+      end
+
+      Process.find_executable(HELPER_NAME) || raise RuntimeError.new(
+        "#{HELPER_NAME} not found: build it with `make build`, install it next to vhs, " \
+        "put it on PATH, or set VHS_RECORD_HELPER")
+    end
 
     # Session is a running child whose stdio is a pty, plus the master side.
     class Session
@@ -47,19 +81,6 @@ module Vhs
       getter process : Process
 
       def initialize(@master : IO::FileDescriptor, @process : Process)
-      end
-
-      # inherit_size copies the window size of `from` onto the pty, like
-      # pty.InheritSize. It returns false when the source is not a terminal or
-      # has no size to report.
-      def inherit_size(from : IO) : Bool
-        source = from.as?(IO::FileDescriptor)
-        return false if source.nil? || !Term.terminal?(source)
-
-        size = Term.winsize(source)
-        return false if size.nil?
-
-        Term.set_winsize(@master, size)
       end
 
       # read reads from the pty master. A closed slave surfaces as EIO on Linux
@@ -94,32 +115,53 @@ module Vhs
     # Upstream calls pty.Start(exec.Command(shell)), so the program is the shell
     # name with no arguments; `env` is merged into the inherited environment
     # exactly like `append(os.Environ(), "VHS_RECORD=true")`.
-    def start(command : String, env : Hash(String, String)? = nil) : Session
+    #
+    # The child is the record launcher, which makes itself a session leader,
+    # adopts the pty slave as its controlling terminal, applies `size` and execs
+    # the shell, so the recorded pid and exit status are the shell's.
+    #
+    # `size` is creack/pty's StartWithSize: upstream's `vhs record` starts the pty
+    # and then calls pty.InheritSize, which is the same ioctl, but doing it in the
+    # launcher means the size is right before the shell exists.
+    def start(command : String, env : Hash(String, String)? = nil, size : LibC::Winsize? = nil) : Session
+      ensure_command(command)
       master_fd = open_master
       slave_path = slave_name(master_fd)
-      slave = File.open(slave_path, "r+")
+      # The launcher execs this name as given, so the shell keeps upstream's
+      # argv[0] (os/exec resolves PATH but leaves Args[0] alone) and does its own
+      # PATH lookup.
+      args = [slave_path, command]
+      args.concat([size.ws_row.to_s, size.ws_col.to_s]) if size
 
       begin
         process = Process.new(
-          command,
+          helper_path,
+          args,
           env: env,
-          input: slave,
-          output: slave,
-          error: slave,
+          input: Process::Redirect::Close,
+          output: Process::Redirect::Close,
+          error: Process::Redirect::Inherit,
         )
       rescue ex
-        slave.close
         LibC.close(master_fd)
         raise ex
       end
 
-      # The child holds its own copy of the slave; the recorder only keeps the
-      # master, so the pty reaches end of file as soon as the shell exits.
-      slave.close
-
+      # The launcher owns the slave from here; the recorder keeps only the master,
+      # so the pty reaches end of file as soon as the shell exits.
       master = IO::FileDescriptor.new(master_fd)
       master.sync = true
       Session.new(master, process)
+    end
+
+    # ensure_command checks the shell before the launcher starts, so a missing
+    # shell raises here like os/exec does instead of dying after the pty exists.
+    # Resolution is only for the check: the launcher still execs the given name.
+    private def ensure_command(command : String) : Nil
+      return if command.includes?(File::SEPARATOR) && File::Info.executable?(command)
+      return if Process.find_executable(command)
+
+      raise File::NotFoundError.new("exec: #{command}: no such file or directory", file: command)
     end
 
     private def open_master : Int32
@@ -181,10 +223,27 @@ module Vhs
       size
     end
 
+    # foreground_pgroup reads the terminal's foreground process group, which is
+    # tcgetpgrp(3). A terminal with no controlling session reports nil.
+    def foreground_pgroup(io : IO::FileDescriptor) : Int32?
+      pgroup = 0
+      return nil if LibC.ioctl(io.fd, Pty::TIOCGPGRP, pointerof(pgroup)) != 0
+      return nil if pgroup == 0
+
+      pgroup
+    end
+
     # set_winsize applies a window size to a terminal.
     def set_winsize(io : IO::FileDescriptor, size : LibC::Winsize) : Bool
+      set_winsize(io.fd, size)
+    end
+
+    # set_winsize applies a window size to a raw file descriptor. The record
+    # launcher needs this form: wrapping a pty fd in an IO puts it in the event
+    # loop as non-blocking, and the shell would inherit O_NONBLOCK on its stdio.
+    def set_winsize(fd : Int32, size : LibC::Winsize) : Bool
       copy = size
-      LibC.ioctl(io.fd, Pty::TIOCSWINSZ, pointerof(copy)) == 0
+      LibC.ioctl(fd, Pty::TIOCSWINSZ, pointerof(copy)) == 0
     end
 
     private def get_state(io : IO::FileDescriptor) : LibC::Termios

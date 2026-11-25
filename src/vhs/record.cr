@@ -130,11 +130,7 @@ module Vhs
                   output : IO = STDOUT,
                   terminal_output : IO = STDERR,
                   log : IO = STDERR) : Nil
-    session = Pty.start(shell, {"VHS_RECORD" => "true"})
-
-    if Term.terminal?(input) && !session.inherit_size(input)
-      log.puts "error resizing pty: could not copy the window size"
-    end
+    session = Pty.start(shell, {"VHS_RECORD" => "true"}, record_window_size(input, log))
 
     previous_state = make_raw(input)
 
@@ -222,6 +218,18 @@ module Vhs
         break
       end
     end
+  end
+
+  # record_window_size reads the recording terminal's window size so the launcher
+  # can apply it, which is what upstream's pty.InheritSize ioctl does. A recording
+  # input that is not a terminal has no size to copy, and upstream logs that.
+  private def self.record_window_size(input : IO, log : IO) : LibC::Winsize?
+    fd = input.as?(IO::FileDescriptor)
+    return nil if fd.nil? || !Term.terminal?(fd)
+
+    size = Term.winsize(fd)
+    log.puts "error resizing pty: could not read the window size" if size.nil?
+    size
   end
 
   # make_raw puts the recording terminal in raw mode and returns the previous

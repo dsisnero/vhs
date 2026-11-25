@@ -7,6 +7,8 @@ authors:
 targets:
   vhs:
     main: src/vhs.cr
+  vhs-record-shell:
+    main: src/vhs_record_shell.cr
 
 dependencies:
   lipgloss:

@@ -46,12 +46,13 @@ clean:
 build:
 	mkdir -p bin
 	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache crystal build src/vhs.cr -o bin/vhs
+	CRYSTAL_CACHE_DIR=$(PWD)/.crystal-cache crystal build src/vhs_record_shell.cr -o bin/vhs-record-shell
 
 help:
 	@echo "Available targets:"
 	@echo "  install        - Install shard dependencies"
 	@echo "  update         - Update shard dependencies"
-	@echo "  build          - Build vhs binary to bin/"
+	@echo "  build          - Build vhs and vhs-record-shell binaries to bin/"
 	@echo "  test           - Run specs"
 	@echo "  format         - Check code formatting"
 	@echo "  lint           - Run linter (ameba)"

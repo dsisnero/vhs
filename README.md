@@ -77,7 +77,10 @@ All of upstream's CLI surfaces are implemented:
 * `vhs record` opens a pseudo-terminal for the shell named by `--shell` (or
   `$SHELL`), puts the recording terminal in raw mode, and prints the equivalent
   tape on stdout. The pty comes from `posix_openpt`/`grantpt`/`unlockpt` and
-  raw mode from `termios` (`src/vhs/pty.cr`), so any POSIX system works.
+  raw mode from `termios` (`src/vhs/pty.cr`), so any POSIX system works. The
+  shell is started through `vhs-record-shell`, which gives it its own session and
+  controlling terminal (`setsid` + `TIOCSCTTY`, the equivalent of creack/pty's
+  `SysProcAttr`), so job control and `^C` behave like upstream.
 * `vhs publish <file>.gif` uploads the GIF to `vhs.charm.sh`. The transport is
   the system OpenSSH client rather than a linked SSH library: the same key file
   (`vhs_ed25519`), the same `known_hosts`, and the GIF on stdin. Both live in
@@ -86,13 +89,13 @@ All of upstream's CLI surfaces are implemented:
 * `vhs -o out.gif tape.tape` overrides the tape's outputs by extension, and
   `-p`/`VHS_PUBLISH=true` publishes the result.
 
-Two deliberate differences inside `vhs record`: the shell runs without
-`setsid`/`TIOCSCTTY` (Crystal has no pre-exec hook), so an interactive `bash`
-prints "no job control in this shell" in the recording terminal; the generated
-tape is unaffected. And the tape watcher that inserts `Sleep` lines is stopped
-when a recording ends instead of being leaked like upstream's goroutine.
-`record` is POSIX-only (it needs `posix_openpt` and `termios`), so the port
-builds on macOS, Linux, and the BSDs; Windows is not supported.
+`record` needs the `vhs-record-shell` launcher next to the `vhs` binary (both are
+built by `make build`); it can also be pointed at with `$VHS_RECORD_HELPER` or
+found on `PATH`. Only `vhs record` uses it — evaluating tapes does not. The tape
+watcher that inserts `Sleep` lines is stopped when a recording ends instead of
+being leaked like upstream's goroutine. `record` is POSIX-only (it needs
+`posix_openpt` and `termios`), so the port builds on macOS, Linux, and the BSDs;
+Windows is not supported.
 
 ## Development
 

@@ -127,11 +127,15 @@ are*, not *how the repo works*.
     the outputs through an `EvaluatorOption` and `-p`/`VHS_PUBLISH=true`
     publishes the resulting GIF, both like upstream main.go. `serve`/`tty`/`man`
     are not ported and not yet in the ledger.
-  - Recorder: `Vhs.record` starts the shell on a pty and prints the tape; the
-    tape watcher that inserts `Sleep` lines runs in a fiber that is stopped when
-    the recording ends (upstream leaks its goroutine), and the child is not a
-    session leader (Crystal exposes no pre-exec hook), which is visible only as
-    bash's "no job control in this shell" banner in the recording terminal.
+  - Recorder: `Vhs.record` starts the shell on a pty and prints the tape. The
+    shell gets upstream's session and controlling terminal — `setsid` +
+    `TIOCSCTTY` + the inherited window size — from the `vhs-record-shell`
+    launcher (`src/vhs_record_shell.cr`), because that work belongs between fork
+    and exec and Crystal's `Process` has no pre-exec hook; the tape watcher that
+    inserts `Sleep` lines runs in a fiber that is stopped when the recording
+    ends (upstream leaks its goroutine). Specs assert the pty's foreground
+    process group, that `^C` interrupts the foreground command, and that the
+    launcher applies the window size before the shell starts.
   - Publish: the SSH transport is the system `ssh` client (and `ssh-keygen` for
     the first key) rather than a linked SSH library, so `vhs publish` needs them
     on `PATH`; `-F /dev/null` keeps the user's ssh_config out of the picture and
@@ -155,6 +159,15 @@ are*, not *how the repo works*.
     sidecars next to every file. They break spec discovery and make git print
     `non-monotonic index .../._pack-*.idx`. Run `make sidecars` (every gate
     already depends on it).
+  - `src/vhs_record_shell.cr` is a separate target, not part of the library
+    (`src/vhs.cr` requires `./vhs/*`, which does not match it). Its specs build
+    it into `temp/` when the source is newer than the last build, so
+    `crystal spec` needs a compiler in `PATH` (or `$CRYSTAL`).
+  - Never wrap a pty fd in a Crystal `IO` before handing it to a child: the
+    `IO::FileDescriptor` initializer puts the fd in the event loop as
+    non-blocking, and the shell inherits `O_NONBLOCK` on its stdio (`cat` exits
+    immediately). `Term.set_winsize` therefore has a raw-fd overload for the
+    launcher.
   - `term2` was removed from `shard.yml`: nothing required it, it has no
     pseudo-terminal support, and its only trace was a TODO. The dead `KEYMAP`
     rune table in `evaluator.cr` (superseded by `src/vhs/keys.cr`) went with it,
@@ -187,7 +200,7 @@ are*, not *how the repo works*.
   browser-runtime migration (working tree clean at that commit).
 - **Ledger:** 248 rows: 245 `ported`, 3 `intentional_divergence`, 0 `missing`.
   All 17 upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (43 files); `make test` `253 examples, 0
+- **Gates:** `make lint` pass (44 files); `make test` `256 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 245 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 3
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
@@ -278,10 +291,16 @@ Keep this block accurate after every feature: the next session reads it first
 - `VHS#render` now runs inside `Vhs.evaluate` like upstream, so specs evaluate
   through `evaluate_without_render` (an `EvaluatorOption` that clears the outputs)
   to stay hermetic; the CLI path renders for real.
-- `Vhs.record` spawns the shell with the pty slave as its stdio but without
-  `setsid`/`TIOCSCTTY` (Crystal's `Process` exposes no pre-exec hook, unlike
-  creack/pty), so an interactive bash prints "no job control in this shell" to
-  the recording terminal. The generated tape is identical.
+- `Vhs.record` reaches upstream's session/controlling-terminal setup through a
+  separate launcher program (`bin/vhs-record-shell`, built by `make build` or by
+  `shards build`) instead of `syscall.SysProcAttr{Setsid, Setctty}` in the child:
+  Crystal's `Process` has no pre-exec hook and does not bind `setsid` or
+  `TIOCSCTTY`. The launcher `exec`s the shell, so the recorded pid and exit
+  status stay the shell's. `Pty.start` finds it via `VHS_RECORD_HELPER`, next to
+  the running binary, or on `PATH`.
+- The window size travels through that launcher (creack/pty's `StartWithSize`
+  shape) rather than through `pty.InheritSize` after the start; the ioctl and its
+  effect are the same, and the shell starts with the size already applied.
 - `Vhs.record` stops the tape watcher when a recording ends, where upstream
   leaks the goroutine because the process exits immediately; the inserted `Sleep`
   lines are the same. Its shell and IO parameters exist because cobra hands
