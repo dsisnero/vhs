@@ -8,17 +8,20 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the ledger has **no `missing` rows left**. Everything in
-  the pinned Go tree is now `ported`, `partial`, `in_progress`, or a documented
-  `intentional_divergence`. The three former CLI gaps resolved as: `Highlight`
-  ported, `DefaultTestOptions` ported, and `record.go::Record` /
-  `publish.go::Publish` recorded as intentional divergences (PTY requirement and
-  SSH-client requirement respectively).
+- **Current focus:** every command surface is now `ported` or an explained
+  `partial` — the ledger has no `missing` and no `in_progress` rows. The last
+  command work closed the settings family with per-setting specs, replaced three
+  hand-rolled duration parsers with `Vhs.parse_duration` (Go's
+  `time.ParseDuration` grammar), and fixed two real bugs: `Set LoopOffset` never
+  parsed its own `%` argument, and an early return left the frame-capture fiber
+  running forever.
 - **Next up:**
-  1. Close the remaining `partial` rows (24) by asserting the behavior they name
-     — `partial` is now the real backlog, alongside `in_progress`.
+  1. Work down the 24 `partial` rows, which are now the whole backlog: they name
+     exact upstream assertions still missing (`Record`/`Render`/`Buffer`/
+     `CurrentLine`/`SaveOutput`, headless `Start`/`Setup`, plus `Execute`/`ExecuteType`/
+     `ExecuteWait` behaviors).
   2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
-     reviewed discovery/manifest change with the CLI phase).
+     reviewed discovery change).
   3. Consider the tree-sitter ID migration (378 items) as its own reviewed
      branch once the curated ledger is fully green.
 - **Status by area:**
@@ -70,6 +73,17 @@ are*, not *how the repo works*.
     stage and format), and `ffmpeg_renderer.cr` only spawns the commands.
     `png_renderer.cr` renders both frame layers (text + cursor) and has spec
     coverage. An end-to-end tape renders a correct 400x200 GIF.
+  - Durations: `Vhs.parse_duration` implements Go's `time.ParseDuration` grammar
+    (ns/us/µs/ms/s/m/h, fractions, multi-component, signs) and is the single path
+    for `Sleep`, `Wait`, `Set TypingSpeed`, and `Set WaitTimeout`; the three
+    hand-rolled parsers it replaced rejected `1m` and treated unitless numbers as
+    milliseconds.
+  - Frame capture: a tape's capture fiber is now always stopped (an `ensure`
+    covers every early return). Before this, a tape with an invalid setting left
+    its fiber rendering forever, which starved later tapes into "no frames" and
+    tripled suite time. PNG rendering is still the capture bottleneck: a busy
+    24x80 screen takes ~450ms per frame, so real tapes capture well below the
+    configured framerate (font resolution and font loading are cached now).
   - Style plumbing: upstream shares one `*StyleOptions` between `Options`,
     `Video`, and `Screenshot`; Crystal structs copy, so every `SET` that touches
     the style goes through `Vhs.update_style`, which writes all three copies
@@ -125,11 +139,12 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `022cd8c` port: close the ledger — port DefaultTestOptions,
   record the CLI divergences (working tree clean at that commit).
-- **Ledger `missing` rows left: none.** 248 rows: 202 `ported`, 24 `partial`,
-  15 `in_progress`, 7 `intentional_divergence`. No test IDs are `missing`.
-- **Gates:** `make lint` pass (31 files); `make test` `179 examples, 0
+- **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
+  rows: 217 `ported`, 24 `partial`, 7 `intentional_divergence`. No test IDs are
+  `missing`.
+- **Gates:** `make lint` pass (33 files); `make test` `189 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 202 `ported`, 24 `partial`, 15 `in_progress`, 0 `missing`, 7
+  rows: 217 `ported`, 24 `partial`, 0 `in_progress`, 0 `missing`, 7
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.

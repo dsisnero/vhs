@@ -251,6 +251,114 @@ module Vhs
       end
     end
 
+    describe "non-style settings" do
+      it "applies every remaining Set command to the options" do
+        tape = <<-TAPE
+        Set Shell bash
+        Set FontFamily "JetBrains Mono"
+        Set FontSize 18
+        Set LetterSpacing 2
+        Set LineHeight 1.5
+        Set Framerate 25
+        Set PlaybackSpeed 2.5
+        Set TypingSpeed 120ms
+        Set WaitTimeout 1m
+        Set WaitPattern /ready>/
+        Set CursorBlink false
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        inspected = false
+        inspect_options = ->(v : VHS) do
+          inspected = true
+          options = v.options
+
+          options.shell.should eq(SHELLS["bash"])
+          options.font_family.should eq("JetBrains Mono")
+          options.font_size.should eq(18)
+          options.letter_spacing.should eq(2.0)
+          options.line_height.should eq(1.5)
+          options.video.framerate.should eq(25)
+          options.video.playback_speed.should eq(2.5)
+          options.typing_speed.should eq(120.milliseconds)
+          options.wait_timeout.should eq(1.minute)
+          options.wait_pattern.should eq(/ready>/)
+          options.cursor_blink?.should be_false
+
+          options.video.output = VideoOutputs.new
+          options.screenshot.screenshots.clear
+          nil
+        end
+
+        Vhs.evaluate(tape, IO::Memory.new, inspect_options, drop_outputs_option).should be_empty
+        inspected.should be_true
+      end
+
+      it "rejects invalid setting values" do
+        invalid_tapes = [
+          "Set Shell nope\nOutput test.gif",
+          "Set FontSize 0\nOutput test.gif",
+          "Set LetterSpacing 0\nOutput test.gif",
+          "Set LineHeight -1\nOutput test.gif",
+          "Set Framerate 0\nOutput test.gif",
+          "Set PlaybackSpeed 0\nOutput test.gif",
+          "Set TypingSpeed nope\nOutput test.gif",
+          "Set WaitTimeout nope\nOutput test.gif",
+          "Set WaitPattern [\nOutput test.gif",
+        ]
+
+        invalid_tapes.each do |tape|
+          Vhs.evaluate(tape, IO::Memory.new, drop_outputs_option).should_not be_empty
+        end
+      end
+    end
+
+    describe "env, loop offset, and require" do
+      it "applies Env to the process environment like upstream" do
+        tape = <<-TAPE
+        Env VHS_SPEC_ENV seen
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        begin
+          Vhs.evaluate(tape, IO::Memory.new, drop_outputs_option).should be_empty
+          ENV["VHS_SPEC_ENV"]?.should eq("seen")
+        ensure
+          ENV.delete("VHS_SPEC_ENV")
+        end
+      end
+
+      it "parses LoopOffset percentages" do
+        tape = <<-TAPE
+        Set LoopOffset 60.4%
+        Output test.gif
+        Sleep 0.1s
+        TAPE
+
+        seen = 0.0
+        inspect_offset = ->(v : VHS) do
+          seen = v.options.loop_offset
+          v.options.video.output = VideoOutputs.new
+          nil
+        end
+
+        Vhs.evaluate(tape, IO::Memory.new, inspect_offset, drop_outputs_option).should be_empty
+        seen.should eq(60.4)
+      end
+
+      it "requires a binary that exists in PATH" do
+        present = "Require sh\nOutput test.gif\nSleep 0.1s"
+        Vhs.evaluate(present, IO::Memory.new, drop_outputs_option).should be_empty
+
+        missing = "Require definitely-not-a-real-binary\nOutput test.gif"
+        errors = Vhs.evaluate(missing, IO::Memory.new, drop_outputs_option)
+        errors.size.should eq(1)
+        errors.first.message.to_s.should contain("not found in PATH")
+      end
+    end
+
     describe "style settings" do
       it "propagates SET style commands to the video and screenshot options" do
         tape = <<-TAPE
@@ -298,7 +406,7 @@ module Vhs
         tape = <<-TAPE
         Set Theme "Catppuccin Latte"
         Output test.gif
-        Sleep 0.1s
+        Sleep 0.15s
         TAPE
 
         seen_theme = ""
@@ -316,7 +424,7 @@ module Vhs
       it "can redirect the output paths before rendering" do
         tape = <<-TAPE
         Output test.gif
-        Sleep 0.1s
+        Sleep 0.15s
         TAPE
 
         captured = ""
@@ -336,7 +444,7 @@ module Vhs
       it "applies multiple options in order" do
         tape = <<-TAPE
         Output test.gif
-        Sleep 0.1s
+        Sleep 0.15s
         TAPE
 
         calls = [] of String

@@ -9,6 +9,35 @@ module Vhs
 
     MONOSPACE_FONTCONFIG_SPACING = "100"
 
+    # Font resolution and loading dominate frame time: `fc-match` is a subprocess
+    # and loading a font file per frame is wasted work, so both are cached for the
+    # life of the process. Faces are cached per size, which is what
+    # FreeType::TrueType.new_face is expensive at.
+    @@font_paths = {} of String => String
+    @@fonts = {} of String => FreeType::TrueType::Font
+
+    private def cached_font_path(font_family : String) : String
+      @@font_paths.fetch(font_family) do
+        path = resolve_font_path(font_family)
+        @@font_paths[font_family] = path
+        path
+      end
+    end
+
+    private def cached_font(font_path : String) : FreeType::TrueType::Font
+      @@fonts.fetch(font_path) do
+        font = FreeType::TrueType.load(font_path)
+        @@fonts[font_path] = font
+        font
+      end
+    end
+
+    # Faces hold mutable glyph state, so they are created per call; only the
+    # (expensive) font load is shared.
+    private def cached_face(font_path : String, font_size : Int32) : FreeType::TrueType::Face
+      FreeType::TrueType.new_face(cached_font(font_path), font_size.to_f64)
+    end
+
     # Resolves font family name to a font file path.
     # Tries fc-match first, falls back to bundled Roboto font.
     private def resolve_font_path(font_family : String) : String
@@ -81,14 +110,13 @@ module Vhs
                font_family : String = "DejaVu Sans Mono", font_size : Int32 = 22,
                letter_spacing : Float64 = 1.0, line_height : Float64 = 1.0,
                foreground : String = "#dddddd", background : String = "#171717")
-      # Load font using font family resolution
-      font_path = resolve_font_path(font_family)
+      # Load font using font family resolution (cached per family and size).
+      font_path = cached_font_path(font_family)
       unless File.exists?(font_path)
         raise "Font file not found: #{font_path}"
       end
 
-      font = FreeType::TrueType.load(font_path)
-      face = FreeType::TrueType.new_face(font, font_size.to_f64)
+      face = cached_face(font_path, font_size)
 
       # Compute cell dimensions
       metrics = face.metrics
@@ -150,13 +178,12 @@ module Vhs
                       font_family : String = "DejaVu Sans Mono", font_size : Int32 = 22,
                       letter_spacing : Float64 = 1.0, line_height : Float64 = 1.0,
                       cursor_color : String = "#dddddd")
-      font_path = resolve_font_path(font_family)
+      font_path = cached_font_path(font_family)
       unless File.exists?(font_path)
         raise "Font file not found: #{font_path}"
       end
 
-      font = FreeType::TrueType.load(font_path)
-      face = FreeType::TrueType.new_face(font, font_size.to_f64)
+      face = cached_face(font_path, font_size)
 
       metrics = face.metrics
       line_height_px = (metrics.height.to_i / 64.0 * line_height).round.to_i

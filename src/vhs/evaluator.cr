@@ -382,22 +382,12 @@ module Vhs
   # ExecuteSleep sleeps for the desired time specified through the argument of
   # the Sleep command.
   def self.execute_sleep(cmd : Parser::Command, _v : VHS) : Exception?
-    # Parse duration (simple implementation for now)
-    # Supports formats: "1s", "500ms", "0.5s"
-    duration_str = cmd.args
-
-    if duration_str.ends_with?("ms")
-      ms = duration_str[0...-2].to_f? || 0.0
-      seconds = ms / 1000.0
-    elsif duration_str.ends_with?("s")
-      s = duration_str[0...-1].to_f? || 0.0
-      seconds = s
-    else
-      # Assume seconds
-      seconds = duration_str.to_f? || 0.0
+    duration = Vhs.parse_duration(cmd.args)
+    if duration.nil?
+      return Exception.new("failed to parse duration: #{cmd.args}")
     end
 
-    sleep(seconds.seconds) if seconds > 0
+    sleep(duration) if duration > 0.seconds
 
     nil
   end
@@ -505,18 +495,11 @@ module Vhs
   def self.execute_wait(cmd : Parser::Command, v : VHS) : Exception?
     timeout = v.options.wait_timeout
     if !cmd.options.empty?
-      duration_str = cmd.options
-      if duration_str.ends_with?("ms")
-        ms = duration_str[0...-2].to_f? || 0.0
-        seconds = ms / 1000.0
-      elsif duration_str.ends_with?("s")
-        s = duration_str[0...-1].to_f? || 0.0
-        seconds = s
-      else
-        # Assume seconds
-        seconds = duration_str.to_f? || 0.0
+      parsed = Vhs.parse_duration(cmd.options)
+      if parsed.nil?
+        return Exception.new("failed to parse duration: #{cmd.options}")
       end
-      timeout = seconds.seconds
+      timeout = parsed
     end
 
     scope = "Line"
@@ -803,21 +786,11 @@ module Vhs
 
   # ExecuteSetTypingSpeed applies the default typing speed on the vhs.
   def self.execute_set_typing_speed(cmd : Parser::Command, v : VHS) : Exception?
-    duration_str = cmd.args
-
-    if duration_str.ends_with?("ms")
-      ms = duration_str[0...-2].to_f? || 0.0
-      seconds = ms / 1000.0
-    elsif duration_str.ends_with?("s")
-      s = duration_str[0...-1].to_f? || 0.0
-      seconds = s
-    else
-      # Assume milliseconds
-      ms = duration_str.to_f? || 0.0
-      seconds = ms / 1000.0
+    typing_speed = Vhs.parse_duration(cmd.args)
+    if typing_speed.nil?
+      return Exception.new("failed to parse typing speed: #{cmd.args}")
     end
 
-    typing_speed = seconds.seconds
     opts = v.options.dup
     opts.typing_speed = typing_speed
     v.options = opts
@@ -917,7 +890,9 @@ module Vhs
 
   # ExecuteLoopOffset applies the loop offset on the vhs.
   def self.execute_loop_offset(cmd : Parser::Command, v : VHS) : Exception?
-    loop_offset = cmd.args.to_f64?
+    # The parser always appends "%", so the offset has to be trimmed before
+    # parsing (upstream does the same with strings.TrimRight).
+    loop_offset = cmd.args.rstrip('%').to_f64?
     if loop_offset.nil? || loop_offset < 0.0
       return Exception.new("invalid loop offset: #{cmd.args}")
     end
@@ -999,25 +974,11 @@ module Vhs
 
   # ExecuteSetWaitTimeout applies the wait timeout on the vhs.
   def self.execute_set_wait_timeout(cmd : Parser::Command, v : VHS) : Exception?
-    duration_str = cmd.args
-
-    if duration_str.ends_with?("ms")
-      ms = duration_str[0...-2].to_f? || 0.0
-      seconds = ms / 1000.0
-    elsif duration_str.ends_with?("s")
-      s = duration_str[0...-1].to_f? || 0.0
-      seconds = s
-    else
-      # Assume milliseconds
-      ms = duration_str.to_f? || 0.0
-      seconds = ms / 1000.0
+    wait_timeout = Vhs.parse_duration(cmd.args)
+    if wait_timeout.nil? || wait_timeout <= 0.seconds
+      return Exception.new("failed to parse wait timeout: #{cmd.args}")
     end
 
-    if seconds <= 0.0
-      return Exception.new("invalid wait timeout: #{cmd.args}")
-    end
-
-    wait_timeout = seconds.seconds
     opts = v.options.dup
     opts.wait_timeout = wait_timeout
     v.options = opts
@@ -1622,94 +1583,100 @@ module Vhs
     # Start VHS
     v.start
 
-    # Settings, outputs, and requires run first and are echoed in full color.
-    # Divergence: upstream starts recording after this loop; the port starts
-    # capture in Start, before it.
-    offset = cmds.size
-    cmds.each_with_index do |cmd, i|
-      if cmd.type == Token::SET || cmd.type == Token::OUTPUT || cmd.type == Token::REQUIRE
-        output.puts Highlight.highlight(cmd, false)
-        if cmd.options != "Shell"
-          err = execute(cmd, v)
-          return [err] of Exception if err
+    # Whatever happens next, recording stops and the frame directories are
+    # removed: an early return (bad setting, undersized video, failing command)
+    # must not leave the capture fiber running.
+    begin
+      # Settings, outputs, and requires run first and are echoed in full color.
+      # Divergence: upstream starts recording after this loop; the port starts
+      # capture in Start, before it.
+      offset = cmds.size
+      cmds.each_with_index do |cmd, i|
+        if cmd.type == Token::SET || cmd.type == Token::OUTPUT || cmd.type == Token::REQUIRE
+          output.puts Highlight.highlight(cmd, false)
+          if cmd.options != "Shell"
+            err = execute(cmd, v)
+            return [err] of Exception if err
+          end
+        else
+          offset = i
+          break
         end
-      else
-        offset = i
-        break
-      end
-    end
-
-    # Make sure the image is big enough to fit the padding, bar, and margins.
-    video = v.options.video
-    min_width = double(video.style.padding) + double(video.style.margin)
-    min_height = double(video.style.padding) + double(video.style.margin)
-    unless video.style.window_bar.empty?
-      min_height += video.style.window_bar_size
-    end
-    if video.style.height < min_height || video.style.width < min_width
-      v.errors << Exception.new("Dimensions must be at least #{min_width} x #{min_height}")
-    end
-
-    if !v.errors.empty?
-      v.stop
-      v.cleanup
-      return v.errors
-    end
-
-    # Remaining commands execute in order. Settings after the header are ignored
-    # with a warning, matching upstream.
-    cmds[offset..].each do |cmd|
-      is_setting = cmd.type == Token::SET && cmd.options != "TypingSpeed"
-      if is_setting
-        STDERR.puts "#{ERROR_STYLE}WARN: 'Set #{cmd.options} #{cmd.args}' has been ignored. " \
-                    "Move the directive to the top of the file.\n" \
-                    "Learn more: https://github.com/charmbracelet/vhs#settings#{STYLE_RESET}"
-      end
-      if is_setting || cmd.type == Token::REQUIRE
-        output.puts Highlight.highlight(cmd, true)
-        next
       end
 
-      output.puts Highlight.highlight(
-        cmd,
-        !v.recording? || cmd.type == Token::SHOW || cmd.type == Token::HIDE
-      )
+      # Make sure the image is big enough to fit the padding, bar, and margins.
+      video = v.options.video
+      min_width = double(video.style.padding) + double(video.style.margin)
+      min_height = double(video.style.padding) + double(video.style.margin)
+      unless video.style.window_bar.empty?
+        min_height += video.style.window_bar_size
+      end
+      if video.style.height < min_height || video.style.width < min_width
+        v.errors << Exception.new("Dimensions must be at least #{min_width} x #{min_height}")
+      end
 
-      if err = execute(cmd, v)
+      if !v.errors.empty?
         v.stop
         v.cleanup
+        return v.errors
+      end
+
+      # Remaining commands execute in order. Settings after the header are ignored
+      # with a warning, matching upstream.
+      cmds[offset..].each do |cmd|
+        is_setting = cmd.type == Token::SET && cmd.options != "TypingSpeed"
+        if is_setting
+          STDERR.puts "#{ERROR_STYLE}WARN: 'Set #{cmd.options} #{cmd.args}' has been ignored. " \
+                      "Move the directive to the top of the file.\n" \
+                      "Learn more: https://github.com/charmbracelet/vhs#settings#{STYLE_RESET}"
+        end
+        if is_setting || cmd.type == Token::REQUIRE
+          output.puts Highlight.highlight(cmd, true)
+          next
+        end
+
+        output.puts Highlight.highlight(
+          cmd,
+          !v.recording? || cmd.type == Token::SHOW || cmd.type == Token::HIDE
+        )
+
+        if err = execute(cmd, v)
+          v.stop
+          v.cleanup
+          return [err] of Exception
+        end
+      end
+
+      # Stop VHS
+      v.stop
+      sleep 0.05.seconds
+
+      # Upstream applies the evaluator options here, after all settings and
+      # commands have run and recording has been torn down, so an option sees the
+      # tape's final options and can still redirect the outputs.
+      opts.each(&.call(v))
+
+      # Render the video outputs and any deferred screenshots.
+      if err = v.render
         return [err] of Exception
       end
-    end
 
-    # Stop VHS
-    v.stop
-    sleep 0.05.seconds
+      # Move the frames to the configured directory (Output with a trailing
+      # slash), then clean up the temporary frame and screenshot directories.
+      #
+      # Divergence: upstream renames to the raw argument, and a trailing slash makes
+      # that rename fail silently; the port trims it so the documented
+      # `Output frames/` works.
+      frames = v.options.video.output.frames
+      if !frames.empty? && Dir.exists?(v.options.video.input)
+        File.rename(v.options.video.input, frames.rstrip('/')) rescue nil
+      end
 
-    # Upstream applies the evaluator options here, after all settings and
-    # commands have run and recording has been torn down, so an option sees the
-    # tape's final options and can still redirect the outputs.
-    opts.each(&.call(v))
-
-    # Render the video outputs and any deferred screenshots.
-    if err = v.render
+      v.errors
+    ensure
+      v.stop
       v.cleanup
-      return [err] of Exception
     end
-
-    # Move the frames to the configured directory (Output with a trailing
-    # slash), then clean up the temporary frame and screenshot directories.
-    #
-    # Divergence: upstream renames to the raw argument, and a trailing slash makes
-    # that rename fail silently; the port trims it so the documented
-    # `Output frames/` works.
-    frames = v.options.video.output.frames
-    if !frames.empty? && Dir.exists?(v.options.video.input)
-      File.rename(v.options.video.input, frames.rstrip('/')) rescue nil
-    end
-    v.cleanup
-
-    v.errors
   end
 
   # TerminalEmulator provides a simple terminal emulator for running shell commands
@@ -1973,8 +1940,10 @@ module Vhs
       return unless term
       return unless @recording
 
+      # A blank terminal is still a frame: upstream captures the canvas whatever
+      # it shows, and an empty line buffer must not stall the frame sequence.
       buffer = term.buffer
-      return if buffer.empty?
+      buffer = Array.new(term.height) { Array.new(term.width, ' ') } if buffer.empty?
 
       opts = @options
       frame_num = @total_frames + 1
@@ -2001,7 +1970,6 @@ module Vhs
       )
 
       @total_frames += 1
-
       # Capture the current frame and disable frame capturing, like upstream
       # Record does after writing both layers.
       opts.screenshot.make_screenshot(@total_frames) if opts.screenshot.frame_capture?
