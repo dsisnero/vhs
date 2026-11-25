@@ -1,12 +1,3 @@
-# DEMO_TAPE is upstream's embedded example tape (`vendor/vhs/embed.go` embeds
-# `examples/demo.tape`), the template `vhs new` writes.
-#
-# It is copied verbatim and pinned against the upstream file by
-# `spec/vhs/commands_spec.cr`; the single-quoted heredoc keeps it byte-identical
-# (`crystal tool format` re-escapes ordinary heredocs). The blank line before the
-# closing delimiter is what preserves the file's trailing newline.
-module Vhs
-  DEMO_TAPE = <<-'TAPE'
 # VHS documentation
 #
 # Output:
@@ -76,6 +67,3 @@ Set Height 600
 Type "echo 'Welcome to VHS!'" Sleep 500ms  Enter
 
 Sleep 5s
-
-TAPE
-end

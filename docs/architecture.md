@@ -35,8 +35,11 @@ Current port status, area-by-area progress, and the ordered backlog live in
   `src/vhs.cr` is the CLI: the root command plus the `record`, `publish`, `new`,
   `themes`, and `validate` subcommands that upstream main.go registers with
   cobra. `src/vhs/commands.cr` holds the package-level helpers behind `new`,
-  `themes`, and `validate`, and `src/vhs/demo_tape.cr` is upstream's embedded
-  `examples/demo.tape`.
+  `themes`, and `validate`.
+- `src/vhs/assets/` holds the two files upstream embeds with `//go:embed`
+  (`themes.json` and `examples/demo.tape`), baked at compile time by
+  `src/vhs/assets.cr` through `baked_file_system`, so a shard install or a
+  distributed binary carries them.
 - `vendor/vhs` remains the source of truth for API behavior, edge cases,
   fixtures, and tests.
 

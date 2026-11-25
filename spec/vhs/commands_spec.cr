@@ -4,13 +4,6 @@ module Vhs
   # Characterization specs for the helpers behind main.go's `new`, `themes`, and
   # `validate` commands. The CLI wrappers stay thin so these cover the behavior.
   describe ".demo_tape" do
-    it "matches the upstream example tape byte for byte" do
-      upstream = File.join("vendor", "vhs", "examples", "demo.tape")
-      pending! "vendor/vhs is not checked out" unless File.exists?(upstream)
-
-      DEMO_TAPE.should eq(File.read(upstream))
-    end
-
     it "points the output at the given name" do
       tape = Vhs.demo_tape("demo")
 

@@ -1,6 +1,7 @@
 require "rod"
 require "process"
 require "random/secure"
+require "./assets"
 require "./ffmpeg_renderer"
 
 module Vhs
@@ -51,20 +52,12 @@ module Vhs
     bright_white: BRIGHT_WHITE
   )
 
-  # Path to themes.json file (relative to project root)
-  THEMES_JSON_PATH = File.expand_path("../../vendor/vhs/themes.json", __DIR__)
-
-  # Cached themes loaded from themes.json
+  # Cached themes decoded from the baked themes.json
   @@themes : Array(Theme)? = nil
 
-  # Load themes from themes.json file
+  # load_themes decodes the embedded themes.json, upstream's `//go:embed` data.
   private def self.load_themes : Array(Theme)
-    @@themes ||= begin
-      content = File.read(THEMES_JSON_PATH)
-      Array(Theme).from_json(content)
-    rescue ex : File::NotFoundError
-      [] of Theme
-    end
+    @@themes ||= Array(Theme).from_json(Assets.get("themes.json").read)
   end
 
   # Returns sorted theme names (public for testing)

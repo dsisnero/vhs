@@ -1,4 +1,4 @@
-require "./demo_tape"
+require "./assets"
 require "./lexer"
 require "./parser"
 
@@ -6,11 +6,15 @@ module Vhs
   # TAPE_EXTENSION is the tape file suffix (upstream main.go's `extension`).
   TAPE_EXTENSION = ".tape"
 
+  # The baked `examples/demo.tape`, upstream's embedded demoTape.
+  @@demo_template : String? = nil
+
   # demo_tape returns the scaffolded tape `vhs new` writes: the embedded demo tape
   # with its output redirected to `<name>.gif`, which is upstream's
   # `bytes.Replace(demoTape, "examples/demo.gif", name+".gif", 1)`.
   def self.demo_tape(name : String) : String
-    DEMO_TAPE.sub("examples/demo.gif", "#{name}.gif")
+    template = @@demo_template ||= Assets.get("demo.tape").read
+    template.sub("examples/demo.gif", "#{name}.gif")
   end
 
   # new_tape writes the demo tape to `<name>.tape` and returns that file name,

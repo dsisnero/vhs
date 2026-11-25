@@ -25,6 +25,8 @@ dependencies:
     github: dsisnero/colorful
   crimage:
     github: naqvis/crimage
+  baked_file_system:
+    github: schovi/baked_file_system
 
 crystal: ">= 1.19.1"
 

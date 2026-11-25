@@ -25,12 +25,9 @@ are*, not *how the repo works*.
      manifest change first.
   2. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
-  3. Embed `themes.json` the way upstream's `go:embed` does. It is still read
-     from `vendor/vhs/themes.json` at runtime, so an installed shard silently has
-     no themes at all (`Set Theme` reports every theme as missing and
-     `vhs themes` prints nothing). The fix is a data-embedding decision:
-     a checked-in copy under `src/`, or `baked_file_system` (already in `lib/`
-     through `terminfo`) with a declared dependency.
+  3. Rebase the parity ledger when the `vendor/vhs` pin moves (see
+     [development](../docs/development.md)); the ledger is a current-state
+     artifact of the pinned revision, never appended across versions.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -83,6 +80,13 @@ are*, not *how the repo works*.
     detector (`NO_COLOR`, `COLORTERM`, `TERM`) applied by the CLI. The command
     echo and error printing render through those styles, so the escapes and
     padding come from the same model as upstream instead of hand-written codes.
+  - Themes data: `themes.json` and `examples/demo.tape` are baked into the
+    binary with `baked_file_system` (`src/vhs/assets/`, `src/vhs/assets.cr`),
+    which is the port of upstream's `//go:embed`. They used to be read from the
+    `vendor/vhs` checkout at runtime, which only worked inside this repo: an
+    installed shard had no themes, so `Set Theme` reported every theme as
+    missing. `spec/vhs/assets_spec.cr` pins both files byte for byte against the
+    vendor copies and keeps exFAT `._*` sidecars out of the bake.
   - Style / theme colors: all 21 `style.go` rows reconciled — 20 `ported`
     (19 hex constants + `DefaultStyleOptions`, pinned by
     `spec/vhs/style_spec.cr`), 1 `partial` (`StyleOptions`: fields match
@@ -207,7 +211,7 @@ are*, not *how the repo works*.
   browser-runtime migration (working tree clean at that commit).
 - **Ledger:** 248 rows: 245 `ported`, 3 `intentional_divergence`, 0 `missing`.
   All 17 upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (47 files); `make test` `267 examples, 0
+- **Gates:** `make lint` pass (48 files); `make test` `271 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 245 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 3
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
