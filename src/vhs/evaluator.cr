@@ -634,17 +634,13 @@ module Vhs
     if font_size.nil? || font_size <= 0
       return Exception.new("invalid font size: #{cmd.args}")
     end
-    opts = v.options.dup
-    opts.font_size = font_size
-    v.options = opts
+    v.options.font_size = font_size
     nil
   end
 
   # ExecuteSetFontFamily applies the font family on the vhs.
   def self.execute_set_font_family(cmd : Parser::Command, v : VHS) : Exception?
-    opts = v.options.dup
-    opts.font_family = cmd.args
-    v.options = opts
+    v.options.font_family = cmd.args
     nil
   end
 
@@ -655,18 +651,14 @@ module Vhs
     if shell.nil?
       return Exception.new("invalid shell: #{shell_name}")
     end
-    opts = v.options.dup
-    opts.shell = shell
-    v.options = opts
+    v.options.shell = shell
     nil
   end
 
   # ExecuteSetTheme applies the theme on the vhs.
   def self.execute_set_theme(cmd : Parser::Command, v : VHS) : Exception?
     theme = get_theme(cmd.args)
-    opts = v.options.dup
-    opts.theme = theme
-    v.options = opts
+    v.options.theme = theme
     nil
   rescue ex : ThemeNotFoundError | InvalidThemeError
     ex
@@ -679,9 +671,7 @@ module Vhs
       return Exception.new("failed to parse typing speed: #{cmd.args}")
     end
 
-    opts = v.options.dup
-    opts.typing_speed = typing_speed
-    v.options = opts
+    v.options.typing_speed = typing_speed
     nil
   end
 
@@ -691,11 +681,7 @@ module Vhs
     if framerate.nil? || framerate <= 0
       return Exception.new("invalid framerate: #{cmd.args}")
     end
-    opts = v.options.dup
-    video = opts.video.dup
-    video.framerate = framerate
-    opts.video = video
-    v.options = opts
+    v.options.video.framerate = framerate
     nil
   end
 
@@ -715,9 +701,7 @@ module Vhs
     if letter_spacing.nil? || letter_spacing <= 0.0
       return Exception.new("invalid letter spacing: #{cmd.args}")
     end
-    opts = v.options.dup
-    opts.letter_spacing = letter_spacing
-    v.options = opts
+    v.options.letter_spacing = letter_spacing
     nil
   end
 
@@ -727,9 +711,7 @@ module Vhs
     if line_height.nil? || line_height <= 0.0
       return Exception.new("invalid line height: #{cmd.args}")
     end
-    opts = v.options.dup
-    opts.line_height = line_height
-    v.options = opts
+    v.options.line_height = line_height
     nil
   end
 
@@ -739,11 +721,7 @@ module Vhs
     if playback_speed.nil? || playback_speed <= 0.0
       return Exception.new("invalid playback speed: #{cmd.args}")
     end
-    opts = v.options.dup
-    video = opts.video.dup
-    video.playback_speed = playback_speed
-    opts.video = video
-    v.options = opts
+    v.options.video.playback_speed = playback_speed
     nil
   end
 
@@ -775,9 +753,7 @@ module Vhs
     if loop_offset.nil? || loop_offset < 0.0
       return Exception.new("invalid loop offset: #{cmd.args}")
     end
-    opts = v.options.dup
-    opts.loop_offset = loop_offset
-    v.options = opts
+    v.options.loop_offset = loop_offset
     nil
   end
 
@@ -830,9 +806,7 @@ module Vhs
     rescue ex
       return Exception.new("invalid regex pattern: #{cmd.args}")
     end
-    opts = v.options.dup
-    opts.wait_pattern = pattern
-    v.options = opts
+    v.options.wait_pattern = pattern
     nil
   end
 
@@ -843,9 +817,7 @@ module Vhs
       return Exception.new("failed to parse wait timeout: #{cmd.args}")
     end
 
-    opts = v.options.dup
-    opts.wait_timeout = wait_timeout
-    v.options = opts
+    v.options.wait_timeout = wait_timeout
     nil
   end
 
@@ -860,9 +832,7 @@ module Vhs
                    else
                      return Exception.new("invalid cursor blink value: #{cmd.args}")
                    end
-    opts = v.options.dup
-    opts.cursor_blink = cursor_blink
-    v.options = opts
+    v.options.cursor_blink = cursor_blink
     nil
   end
 

@@ -64,6 +64,18 @@ module Vhs
       Highlight.highlight(command, false).should start_with("#{Vhs::Styles::GRAY_STYLE.render("/very/lon…:")}")
     end
 
+    it "measures the source path in terminal cells" do
+      # Double-width characters count as two cells, like go-runewidth.
+      command = Parser::Command.new(Token::SLEEP, "", "1s")
+      command.source = "/日本語/テスト.tape"
+      prefix = Highlight.highlight(command, false)
+      prefix.should contain("…:")
+      # The path is elided to ten cells including the ellipsis.
+      prefix.scan(/\e\[90m([^\e]*)\e\[0m/) do |match|
+        match[1].size.should be <= 11 # 10 cells plus the trailing colon
+      end
+    end
+
     it "recognizes numbers and times like upstream" do
       Highlight.number?("42").should be_true
       Highlight.number?("4.2").should be_false

@@ -241,9 +241,8 @@ Keep this block accurate after every feature: the next session reads it first
 - `vhs publish` is not ported: upstream uploads over SSH to `ghost.charm.sh`
   using keygen, go-app-paths, and known_hosts, all of which would be a new native
   dependency; the CLI reports publishing as unavailable.
-- `Highlight.number?`/`time?` keep upstream's regexes (so a bare `1m` is not a
-  time), and the elided source path is measured in characters where upstream
-  uses go-runewidth's display cells.
+- `Highlight.number?`/`time?` keep upstream's regexes, so a bare `1m` is not a
+  time (the port matches that quirk rather than fixing it).
 - `Output frames/`: upstream renames the temp frame directory to the raw
   argument (trailing slash), which fails silently, and the rename also fails
   across filesystems because the frame input lives in the system temp dir. The

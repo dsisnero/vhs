@@ -1,3 +1,5 @@
+require "uniwidth"
+
 module Vhs
   # Syntax highlighting for the command echo, ported from upstream syntax.go.
   #
@@ -93,14 +95,24 @@ module Vhs
       path.ends_with?(".tape") ? path[0...-".tape".size] : path
     end
 
-    # Truncates to `max` characters, appending an ellipsis when cut. Upstream uses
-    # go-runewidth, which accounts for double-width characters; the port counts
-    # characters, which matches for the ASCII paths it is meant for.
+    # Truncates to `max` terminal cells, appending an ellipsis when cut. Mirrors
+    # go-runewidth's Truncate, which counts the tail against the budget and
+    # measures double-width characters as two cells (unicode_char_width is the same table).
     private def truncate(text : String, max : Int32) : String
-      return text if text.size <= max
+      return text if UnicodeCharWidth.width(text) <= max
 
-      # go-runewidth's Truncate counts the tail against the budget.
-      "#{text[0, max - 1]}…"
+      budget = max - UnicodeCharWidth.width("…")
+      cells = 0
+      chars = 0
+      text.each_char do |char|
+        char_width = UnicodeCharWidth.width(char)
+        break if cells + char_width > budget
+
+        cells += char_width
+        chars += 1
+      end
+
+      "#{text[0, chars]}…"
     end
   end
 end
