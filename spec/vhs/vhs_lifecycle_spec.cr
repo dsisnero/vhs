@@ -23,6 +23,33 @@ private def lifecycle_eventually(timeout_ms : Int32 = 500, & : -> Bool) : Bool
   end
 end
 
+private def quiet_vhs : Vhs::VHS
+  options = Vhs.default_vhs_options
+  # A silent shell keeps the emulator buffer free of prompt output.
+  options.shell = Vhs::Shell.new(command: ["sleep", "30"])
+  vhs = Vhs::VHS.new
+  vhs.options = options
+  vhs.start
+  vhs
+end
+
+private def frames_for(vhs : Vhs::VHS) : Int32
+  input = vhs.options.video.input
+  return 0 unless Dir.exists?(input)
+
+  Dir.glob(File.join(input, "frame-text-*.png")).size
+end
+
+private def wait_for_frames(vhs : Vhs::VHS, count : Int32, timeout_ms : Int32 = 2000) : Bool
+  deadline = Time.instant + timeout_ms.milliseconds
+  until frames_for(vhs) >= count
+    return false if Time.instant > deadline
+
+    sleep 10.milliseconds
+  end
+  true
+end
+
 module Vhs
   # Characterization specs for the upstream vhs.go lifecycle methods the port
   # implements directly: ApplyLoopOffset, Setup, and Cleanup.
@@ -86,6 +113,33 @@ module Vhs
         vhs.apply_loop_offset.should be_nil
         vhs.options.video.starting_frame.should eq(3)
         FileUtils.rm_rf(input)
+      end
+    end
+
+    describe "#start and frame recording" do
+      it "starts a terminal and captures frames until stopped" do
+        vhs = quiet_vhs
+        vhs.started?.should be_true
+
+        wait_for_frames(vhs, 1).should be_true
+        frames_for(vhs).should be > 0
+        vhs.stop
+        vhs.started?.should be_false
+      end
+
+      it "stops capturing while recording is paused and resumes after" do
+        vhs = quiet_vhs
+        wait_for_frames(vhs, 1)
+
+        vhs.recording = false
+        paused_at = frames_for(vhs)
+        sleep 0.1.seconds
+        frames_for(vhs).should eq(paused_at)
+
+        vhs.recording = true
+        wait_for_frames(vhs, paused_at + 1)
+        frames_for(vhs).should be > paused_at
+        vhs.stop
       end
     end
 

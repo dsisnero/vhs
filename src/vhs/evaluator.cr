@@ -140,6 +140,7 @@ module Vhs
   DEFAULT_FRAMERATE       = 50
   DEFAULT_STARTING_FRAME  =  1
   FONTS_SEPARATOR         = ","
+  SEPARATOR               = "\u2500" * 80
 
   DEFAULT_FONT_FAMILY = with_symbols_fallback([
     "JetBrains Mono",
@@ -1829,6 +1830,7 @@ module Vhs
     property mutex : Mutex
     property frame_capture_fiber : Fiber?
     property stop_frame_capture : Channel(Nil)?
+    property? test_output_created : Bool
 
     def initialize
       # Upstream New() seeds the instance with DefaultVHSOptions, so a bare
@@ -1842,6 +1844,7 @@ module Vhs
       @mutex = Mutex.new
       @frame_capture_fiber = nil
       @stop_frame_capture = nil
+      @test_output_created = false
     end
 
     # Start starts ttyd, browser and everything else needed to create the gif.
@@ -2082,35 +2085,35 @@ module Vhs
       term.screen_lines
     end
 
-    # CurrentLine returns the current line from the buffer.
+    # CurrentLine returns the line the cursor is on, trimmed at the end, like
+    # upstream's cursorY + viewportY lookup.
     def current_line : String
-      # TODO: implement cursor position tracking
       lines = buffer
       return "" if lines.empty?
-      lines.last
+
+      index = @terminal.try(&.cursor_y) || (lines.size - 1)
+      lines[index]? || ""
     end
 
-    # SaveOutput saves the current buffer to the test output file.
+    # SaveOutput appends the current buffer plus a separator to the test output
+    # file. Upstream creates (truncates) that file once, then appends on later
+    # calls; the port does the same with a per-instance flag.
     def save_output : Exception?
       output_path = @options.test.output
       return nil if output_path.empty?
 
-      # Create directory if needed
       dir = File.dirname(output_path)
-      unless Dir.exists?(dir)
-        Dir.mkdir_p(dir)
-      end
+      FileUtils.mkdir_p(dir) unless dir.empty? || Dir.exists?(dir)
 
-      lines = buffer
-      separator = "────────────────────────────────────────────────────────────────────────────────"
+      separator = SEPARATOR
+      mode = @test_output_created ? "a" : "w"
 
       begin
-        File.open(output_path, "a") do |file|
-          lines.each do |line|
-            file.puts(line)
-          end
+        File.open(output_path, mode) do |file|
+          buffer.each { |line| file.puts(line) }
           file.puts(separator)
         end
+        @test_output_created = true
       rescue ex
         return ex
       end

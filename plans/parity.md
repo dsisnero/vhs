@@ -8,18 +8,19 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** every command surface is now `ported` or an explained
-  `partial` — the ledger has no `missing` and no `in_progress` rows. The last
-  command work closed the settings family with per-setting specs, replaced three
-  hand-rolled duration parsers with `Vhs.parse_duration` (Go's
-  `time.ParseDuration` grammar), and fixed two real bugs: `Set LoopOffset` never
-  parsed its own `%` argument, and an early return left the frame-capture fiber
-  running forever.
+- **Current focus:** the `VHS` lifecycle and the testing helpers are now
+  asserted rather than inferred: `Buffer`, `CurrentLine` (reads the cursor's row
+  instead of the last line), `SaveOutput` (create-once + append + 80-column
+  separator), `Record` (frames appear, pause stops them, resume continues), and
+  `Start`. `VHS` and `Setup` are recorded as intentional divergences because
+  their upstream surface is browser/rod-specific.
 - **Next up:**
-  1. Work down the 24 `partial` rows, which are now the whole backlog: they name
-     exact upstream assertions still missing (`Record`/`Render`/`Buffer`/
-     `CurrentLine`/`SaveOutput`, headless `Start`/`Setup`, plus `Execute`/`ExecuteType`/
-     `ExecuteWait` behaviors).
+  1. The remaining 17 `partial` rows: the `Execute*` behaviors
+     (`Execute` error wrapping, `ExecuteAlt`/`ExecuteCtrl`/`ExecuteShift` key
+     encoding, `ExecuteCopy`/`ExecutePaste` clipboard content, `ExecuteType`
+     typing speed, `ExecuteOutput` extension matrix, `ExecuteScreenshot`,
+     `ExecuteHide`/`ExecuteShow`, `ExecuteWait` timeout/Screen scope),
+     `VHS#Render` under a failing ffmpeg, and `Evaluate`'s ordering.
   2. Port `serve.go`/`tty.go`/`man.go` (not in the regex ledger; add them as a
      reviewed discovery change).
   3. Consider the tree-sitter ID migration (378 items) as its own reviewed
@@ -88,13 +89,14 @@ are*, not *how the repo works*.
     `Video`, and `Screenshot`; Crystal structs copy, so every `SET` that touches
     the style goes through `Vhs.update_style`, which writes all three copies
     (asserted in `spec/vhs/evaluator_spec.cr`).
-  - VHS lifecycle: `ApplyLoopOffset` and `Cleanup` are `ported` (with specs);
-    `Setup` is `partial` (only the frame-directory reset is portable in a
-    headless port); `Start`/`Render` stay `partial` because the port uses a
-    terminal emulator and PNG frames instead of ttyd/rod canvases. `VHS.new`
-    seeds `Vhs.default_vhs_options` like upstream `New`.
-  - Testing helpers: `TestOptions` / `Buffer` / `CurrentLine` / `SaveOutput` are
-    `partial` (screen-line based, no cursor tracking, no `DefaultTestOptions`).
+  - VHS lifecycle: `Start`, `Record`, `ApplyLoopOffset`, and `Cleanup` are
+    `ported` with specs (frames appear after start, pause/resume is honoured,
+    loop offsets rename frames, cleanup removes the directories). `Setup` and
+    the `VHS` struct are `intentional_divergence` (browser/rod surface), and
+    `Render` is `partial` because no spec runs ffmpeg itself.
+  - Testing helpers: all four `testing.go` rows are `ported` — `Buffer` and
+    `CurrentLine` read the emulator's cursor row, and `SaveOutput` creates the
+    file once, appends later calls, and writes the 80-character separator.
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
     screenshots are now deferred like upstream — `Screenshot` arms the next
     frame and `FFmpegRenderer.screenshot_commands` renders it.
@@ -141,11 +143,11 @@ are*, not *how the repo works*.
   parsing, loop offset, and the capture-fiber leak (working tree clean at that
   commit).
 - **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
-  rows: 217 `ported`, 24 `partial`, 7 `intentional_divergence`. No test IDs are
+  rows: 222 `ported`, 17 `partial`, 9 `intentional_divergence`. No test IDs are
   `missing`.
-- **Gates:** `make lint` pass (33 files); `make test` `189 examples, 0
+- **Gates:** `make lint` pass (34 files); `make test` `196 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 217 `ported`, 24 `partial`, 0 `in_progress`, 0 `missing`, 7
+  rows: 222 `ported`, 17 `partial`, 0 `in_progress`, 0 `missing`, 9
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
