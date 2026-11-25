@@ -147,8 +147,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `a63cda1` port: extract input synthesis and fix key repeats
-  and per-Type speed (working tree clean at that commit).
+- **Last commit:** `c63caf5` port: assert sleep/wait/render and reclassify the
+  StyleOptions divergence (working tree clean at that commit).
 - **Ledger `missing` rows left: none, and no `in_progress` rows either.** 248
   rows: 237 `ported`, 1 `partial` (`Evaluate`'s recording order), 10
   `intentional_divergence`. No test IDs are `missing`.
