@@ -12,6 +12,9 @@ dependencies:
   lipgloss:
     github: dsisnero/lipgloss
     branch: main
+  rod:
+    github: dsisnero/rod
+    branch: main
   similar:
     github: dsisnero/similar.cr
   term2:

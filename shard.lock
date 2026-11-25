@@ -1,3 +1,4 @@
+# NOTICE: This lockfile contains some overrides from shard.override.yml
 version: 2.0
 shards:
   ameba:
@@ -10,7 +11,7 @@ shards:
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
-    version: 0.13.0+git.commit.636b800614ecbe55997fbde9650c5866e1f5b438
+    version: 0.14.1+git.commit.559a49ab2a7242f60bfd0e939f6b0c70b96b575a
 
   cellwrap:
     git: https://github.com/dsisnero/cellwrap.git
@@ -32,9 +33,17 @@ shards:
     git: https://github.com/kojix2/easyclip.git
     version: 0.1.1
 
+  event_handler:
+    git: https://github.com/crystallabs/event_handler.git
+    version: 1.0.3
+
   golden:
     git: https://github.com/dsisnero/golden.git
     version: 0.1.0+git.commit.82c92f031cbd48f150d8c76d321b5f9211d6d440
+
+  goob:
+    git: https://github.com/dsisnero/goob.git
+    version: 0.6.0
 
   lipgloss:
     git: https://github.com/dsisnero/lipgloss.git
@@ -47,6 +56,14 @@ shards:
   nucleoc:
     git: https://github.com/dsisnero/nucleoc.git
     version: 0.1.0+git.commit.2bc7f15384e9dd9da04258d784756dbf2b75c701
+
+  pluto:
+    git: https://github.com/phenopolis/pluto.git
+    version: 1.0.1
+
+  rod:
+    git: https://github.com/dsisnero/rod.git
+    version: 0.7.0+git.commit.56e34efc1c39cbbe484babd38e0bc9c52122c69b
 
   similar:
     git: https://github.com/dsisnero/similar.cr.git
@@ -63,6 +80,10 @@ shards:
   term2:
     git: https://github.com/dsisnero/term2.git
     version: 0.5.0+git.commit.bafdc6a162032abe577ce2f37a36907f0e016add
+
+  terminfo: # Overridden
+    git: https://github.com/dsisnero/terminfo.git
+    version: 0.8.1+git.commit.521dd2704c91fdaa9b041588e0ac23180b695bb8
 
   textseg:
     git: https://github.com/naqvis/uni_text_seg.git
