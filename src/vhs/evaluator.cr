@@ -142,6 +142,10 @@ module Vhs
   FONTS_SEPARATOR         = ","
   SEPARATOR               = "\u2500" * 80
 
+  # WaitTick is the polling interval used by ExecuteWait, like upstream's
+  # WaitTick constant.
+  WAIT_TICK = 10.milliseconds
+
   DEFAULT_FONT_FAMILY = with_symbols_fallback([
     "JetBrains Mono",
     "DejaVu Sans Mono",
@@ -545,8 +549,11 @@ module Vhs
       return Exception.new("invalid scope: #{scope}")
     end
 
+    if pattern.nil?
+      return Exception.new("no wait pattern set")
+    end
+
     start_time = Time.instant
-    tick = 10.milliseconds
     last_value = ""
 
     while (Time.instant - start_time) < timeout
@@ -562,7 +569,7 @@ module Vhs
           return nil
         end
       end
-      sleep tick
+      sleep WAIT_TICK
     end
 
     Exception.new("timeout waiting for #{cmd.args.inspect} to match #{pattern.inspect}; last value was: #{last_value}")
@@ -987,14 +994,14 @@ module Vhs
 
     def initialize(
       *,
-      @width : Int32 = 1200,
-      @height : Int32 = 600,
-      @padding : Int32 = 60,
+      @width : Int32 = 0,
+      @height : Int32 = 0,
+      @padding : Int32 = 0,
       @background_color : String = "",
       @margin_fill : String = "",
       @margin : Int32 = 0,
       @window_bar : String = "",
-      @window_bar_size : Int32 = 30,
+      @window_bar_size : Int32 = 0,
       @window_bar_color : String = "",
       @border_radius : Int32 = 0,
     )
@@ -1216,7 +1223,7 @@ module Vhs
     property video : VideoOptions
     property loop_offset : Float64
     property wait_timeout : Time::Span
-    property wait_pattern : Regex
+    property wait_pattern : Regex?
     property? cursor_blink : Bool
     property screenshot : ScreenshotOptions
     property style : StyleOptions
@@ -1234,7 +1241,7 @@ module Vhs
       @video = VideoOptions.new,
       @loop_offset = 0.0,
       @wait_timeout = 15.seconds,
-      @wait_pattern = /^$/,
+      @wait_pattern = nil,
       @cursor_blink = true,
       @screenshot = ScreenshotOptions.new,
       @style = StyleOptions.new,

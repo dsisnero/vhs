@@ -4,6 +4,10 @@ require "regex"
 
 module Vhs
   class Parser
+    # CommandType mirrors upstream's `type CommandType token.Type`. The port keeps
+    # Token::Type as the underlying type and renders through Token.to_camel, so the
+    # alias exists for source parity of the surface.
+    alias CommandType = Token::Type
     @errors = [] of ParserError
 
     def initialize(@lexer : Lexer)

@@ -14,14 +14,16 @@ are*, not *how the repo works*.
   `Evaluate`: recording now starts after the settings/output header and after an
   initial `Hide` fast-forward, like upstream's `Record(ctx)`.
 - **Next up:**
-  1. Port `serve.go`/`tty.go`/`man.go`: they are absent from the regex ledger
+  1. Port `vhs record` (LibC PTY + raw stdin) and `vhs publish` (libssh2), the
+     two rows still `missing`.
+  2. Port `serve.go`/`tty.go`/`man.go`: they are absent from the regex ledger
      because their symbols (cobra commands, `serve_unix.go` helpers) are not in
      the discovered kind vocabulary. Adding them means a reviewed discovery or
      manifest change, then the usual port + spec cycle.
-  2. Capture throughput: PNG rendering is the bottleneck (~450ms for a busy
+  3. Capture throughput: PNG rendering is the bottleneck (~450ms for a busy
      24x80 screen), so real tapes capture well below `Set Framerate`. A glyph
      cache or a faster rasteriser is the next fidelity win.
-  3. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
+  4. Decide the tree-sitter ID migration (378 items vs 248) as its own reviewed
      branch, now that the curated ledger is green.
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
@@ -156,10 +158,10 @@ are*, not *how the repo works*.
     the adversarial signoff runs a nested `make test`.
 - **Last commit:** `f85753c` port: close Evaluate — record after the header and
   the Hide fast-forward (working tree clean at that commit).
-- **Ledger: fully reconciled.** 248 rows: 238 `ported`, 10
-  `intentional_divergence`, nothing `partial`/`missing`/`in_progress`. All 17
-  upstream test IDs are `ported`.
-- **Gates:** `make lint` pass (39 files); `make test` `232 examples, 0
+- **Ledger:** 248 rows: 241 `ported`, 5 `intentional_divergence`, 2 `missing`
+  (`run`, `publish` — pending, not impossible). All 17 upstream test IDs are
+  `ported`.
+- **Gates:** `make lint` pass (39 files); `make test` `237 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
   rows: 238 `ported`, 0 `partial`, 0 `in_progress`, 0 `missing`, 10
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
@@ -228,19 +230,10 @@ Keep this block accurate after every feature: the next session reads it first
 
 ## Intentional divergences
 
-- `WaitTick` (upstream `10 * time.Millisecond`): the port inlines
-  `10.milliseconds` in `Vhs::Evaluator.execute_wait` instead of exporting a
-  constant, so the row is `intentional_divergence` rather than `partial`.
 - `ScreenshotOptions#frame_capture?`: Crystal predicate naming for the upstream
   `FrameCapture` field; behavior is identical.
 - `InvalidSyntaxError#message`: Crystal spells Go's `Error()` method `message`,
   returning the same `parser: N error(s)` string.
-- `vhs record` is not ported: upstream drives raw stdin through a PTY, and
-  Crystal's standard library has no PTY allocator. `Vhs::Record.input_to_tape`
-  (the recorder's pure core) is ported and covered by the three upstream tests.
-- `vhs publish` is not ported: upstream uploads over SSH to `ghost.charm.sh`
-  using keygen, go-app-paths, and known_hosts, all of which would be a new native
-  dependency; the CLI reports publishing as unavailable.
 - `Highlight.number?`/`time?` keep upstream's regexes, so a bare `1m` is not a
   time (the port matches that quirk rather than fixing it).
 - `Output frames/`: upstream renames the temp frame directory to the raw
@@ -258,6 +251,11 @@ Keep this block accurate after every feature: the next session reads it first
 - `VHS#render` now runs inside `Vhs.evaluate` like upstream, so specs evaluate
   through `evaluate_without_render` (an `EvaluatorOption` that clears the outputs)
   to stay hermetic; the CLI path renders for real.
+- `vhs record` and `vhs publish` are the only two unimplemented surfaces, and
+  they are pending work rather than language limits: a PTY can be allocated
+  through LibC (`posix_openpt`/`grantpt`/`unlockpt`) and SSH through a libssh2
+  binding. `Vhs::Record.input_to_tape` (the recorder's pure core) is already
+  ported and covered by the three upstream tests.
 - `Draw::Circle`/`Rectangle`/`RoundedRectangle` expose `alpha_at`/`bounds`
   instead of Go's `image.Image` interface (`At`/`Bounds`/`ColorModel`), so the
   three `ColorModel` rows are `intentional_divergence`. The port composites the
@@ -268,9 +266,6 @@ Keep this block accurate after every feature: the next session reads it first
   (its empty-options branch is `fmt.Sprintf("%s %s", c.Type, c.Options)`).
   Everything else about the rendering matches, including the unconditional
   ToCamel of the token name.
-- `Parser::CommandType` has no Crystal counterpart: upstream's `CommandTypes`
-  list is deadcode and `Command.Type` is just `token.Type`, so the port keeps
-  `Token::Type` and renders through `Token.to_camel`.
 - `Vhs::Token::Type` is a `Symbol` alias where upstream's `Type` is a string
   type. Values match one-for-one, so this shows up only in string construction
   and in `Type.String`, which becomes `Token.to_human_readable` because a Symbol
@@ -287,15 +282,6 @@ Keep this block accurate after every feature: the next session reads it first
 - `Vhs.print_error` guards the tape line lookup (`lines[line - 1]?`) where
   upstream panics on an out-of-range line number; the printed gutter is
   identical for valid lines.
-- `Vhs::Options.new` defaults `wait_pattern` to `/^$/` where Go's zero value is
-  a nil regexp; only bare struct defaults are affected, and
-  `Vhs.default_vhs_options` uses the upstream `/>$/` pattern.
-- `Vhs::StyleOptions.new` initializes every field to the `DefaultStyleOptions`
-  numbers (1200/600/60/30) with empty color strings, whereas Go's zero value is
-  `0`/`""` for all fields. Only bare struct defaults are affected;
-  `Vhs.default_vhs_options` / `default_video_options` /
-  `default_style_options` set the upstream values explicitly, which is what
-  `spec/vhs/style_spec.cr` asserts.
 - `src/vhs/evaluator.cr` keeps upstream's flat command dispatch (high cyclomatic
   complexity) instead of splitting into helpers, so divergence from
   `vendor/vhs/command.go` stays visible. Ameba excludes that file for the rule.

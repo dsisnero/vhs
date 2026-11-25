@@ -193,6 +193,14 @@ module Vhs
       end
     end
 
+    it "exposes CommandType as the token type, like upstream" do
+      typed : Parser::CommandType = Token::SET
+      typed.should eq(Token::SET)
+
+      command = Parser::Command.new(typed, "FontSize", "16")
+      command.type.should eq(Token::SET)
+    end
+
     describe "#parse errors" do
       it "collects upstream TestParserErrors in tape order" do
         # Raw heredoc with a leading blank line: upstream's input starts with a

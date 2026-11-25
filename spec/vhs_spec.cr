@@ -53,6 +53,24 @@ describe Vhs do
     end
   end
 
+  describe "Go zero values" do
+    it "leaves StyleOptions at the Go zero value" do
+      style = Vhs::StyleOptions.new
+
+      style.width.should eq(0)
+      style.height.should eq(0)
+      style.padding.should eq(0)
+      style.window_bar_size.should eq(0)
+      style.background_color.should eq("")
+      style.margin_fill.should eq("")
+    end
+
+    it "leaves the wait pattern unset until default options are applied" do
+      Vhs::Options.new.wait_pattern.should be_nil
+      Vhs.default_vhs_options.wait_pattern.should eq(/>$/)
+    end
+  end
+
   describe "VHS.new" do
     it "seeds the instance with the default options" do
       vhs = Vhs::VHS.new

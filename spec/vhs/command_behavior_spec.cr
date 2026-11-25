@@ -147,6 +147,12 @@ module Vhs
       end
     end
 
+    describe "WaitTick" do
+      it "polls at upstream's interval" do
+        WAIT_TICK.should eq(10.milliseconds)
+      end
+    end
+
     describe "FFmpegRenderer.render" do
       it "reports a missing ffmpeg instead of failing silently" do
         original_path = ENV["PATH"]?
