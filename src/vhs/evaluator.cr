@@ -705,10 +705,7 @@ module Vhs
     if height.nil? || height <= 0
       return Exception.new("invalid height: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.height = height
-      style
-    end
+    v.options.style.height = height
     nil
   end
 
@@ -756,10 +753,7 @@ module Vhs
     if padding.nil? || padding < 0
       return Exception.new("invalid padding: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.padding = padding
-      style
-    end
+    v.options.style.padding = padding
     nil
   end
 
@@ -769,10 +763,7 @@ module Vhs
     if width.nil? || width <= 0
       return Exception.new("invalid width: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.width = width
-      style
-    end
+    v.options.style.width = width
     nil
   end
 
@@ -792,10 +783,7 @@ module Vhs
 
   # ExecuteSetMarginFill applies the margin fill on the vhs.
   def self.execute_set_margin_fill(cmd : Parser::Command, v : VHS) : Exception?
-    update_style(v) do |style|
-      style.margin_fill = cmd.args
-      style
-    end
+    v.options.style.margin_fill = cmd.args
     nil
   end
 
@@ -805,19 +793,13 @@ module Vhs
     if margin.nil? || margin < 0
       return Exception.new("invalid margin: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.margin = margin
-      style
-    end
+    v.options.style.margin = margin
     nil
   end
 
   # ExecuteSetWindowBar applies the window bar on the vhs.
   def self.execute_set_window_bar(cmd : Parser::Command, v : VHS) : Exception?
-    update_style(v) do |style|
-      style.window_bar = cmd.args
-      style
-    end
+    v.options.style.window_bar = cmd.args
     nil
   end
 
@@ -827,10 +809,7 @@ module Vhs
     if window_bar_size.nil? || window_bar_size < 0
       return Exception.new("invalid window bar size: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.window_bar_size = window_bar_size
-      style
-    end
+    v.options.style.window_bar_size = window_bar_size
     nil
   end
 
@@ -840,10 +819,7 @@ module Vhs
     if border_radius.nil? || border_radius < 0
       return Exception.new("invalid border radius: #{cmd.args}")
     end
-    update_style(v) do |style|
-      style.border_radius = border_radius
-      style
-    end
+    v.options.style.border_radius = border_radius
     nil
   end
 
@@ -1023,7 +999,11 @@ module Vhs
   }
 
   # StyleOptions represents the ui options for video and screenshots.
-  struct StyleOptions
+  #
+  # A class (reference semantics) because upstream shares one *StyleOptions
+  # between Options, Video, and Screenshot, so a Set command is visible to every
+  # renderer without copying.
+  class StyleOptions
     property width : Int32
     property height : Int32
     property padding : Int32
@@ -1087,7 +1067,9 @@ module Vhs
   end
 
   # ScreenshotOptions holds options for taking screenshots.
-  struct ScreenshotOptions
+  # A class for the same reason: upstream mutates ScreenshotOptions through
+  # pointer-receiver methods (makeScreenshot, enableFrameCapture).
+  class ScreenshotOptions
     property? frame_capture : Bool
     property next_screenshot_path : String
     property screenshots : Hash(String, Int32)
@@ -1360,19 +1342,6 @@ module Vhs
         return path
       end
     end
-  end
-
-  # update_style applies a change to the style the terminal uses *and* to the
-  # copies the video and screenshot renderers hold. Upstream shares one
-  # *StyleOptions across all three; Crystal structs copy on assignment, so every
-  # SET command that touches the style has to write all three.
-  private def self.update_style(v : VHS, & : StyleOptions -> StyleOptions) : Nil
-    style = yield v.options.style
-    opts = v.options
-    opts.style = style
-    opts.video.style = style
-    opts.screenshot.style = style
-    v.options = opts
   end
 
   private def self.double(n : Int32) : Int32
@@ -1855,15 +1824,8 @@ module Vhs
 
       @total_frames += 1
       # Capture the current frame and disable frame capturing, like upstream
-      # Record does after writing both layers. ScreenshotOptions is a struct, so
-      # the update has to be written back onto the options.
-      if @options.screenshot.frame_capture?
-        screenshot = @options.screenshot
-        screenshot.make_screenshot(@total_frames)
-        options = @options
-        options.screenshot = screenshot
-        @options = options
-      end
+      # Record does after writing both layers.
+      @options.screenshot.make_screenshot(@total_frames) if @options.screenshot.frame_capture?
     end
 
     # Close stops recording and cleans up resources

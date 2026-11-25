@@ -97,15 +97,18 @@ are*, not *how the repo works*.
     tripled suite time. PNG rendering is still the capture bottleneck: a busy
     24x80 screen takes ~450ms per frame, so real tapes capture well below the
     configured framerate (font resolution and font loading are cached now).
-  - Style plumbing: upstream shares one `*StyleOptions` between `Options`,
-    `Video`, and `Screenshot`; Crystal structs copy, so every `SET` that touches
-    the style goes through `Vhs.update_style`, which writes all three copies
-    (asserted in `spec/vhs/evaluator_spec.cr`).
+  - Style plumbing: `StyleOptions` and `ScreenshotOptions` are classes, because
+    upstream shares one `*StyleOptions` between `Options`, `Video`, and
+    `Screenshot` and mutates screenshots through pointer receivers. Reference
+    semantics means a `SET` is visible to every renderer without copying, which
+    removed the old `Vhs.update_style` write-back helper and the class of bugs it
+    existed for (style settings only reaching one copy, screenshot bookkeeping
+    being written to a discarded copy).
   - VHS lifecycle: `Start`, `Record`, `ApplyLoopOffset`, and `Cleanup` are
     `ported` with specs (frames appear after start, pause/resume is honoured,
     loop offsets rename frames, cleanup removes the directories). `Setup` and
-    the `VHS` struct are `intentional_divergence` (browser/rod surface), and
-    `Render` is `partial` because no spec runs ffmpeg itself.
+    the `VHS` struct are `intentional_divergence` (browser/rod surface);
+    `Render` is `ported` (missing-ffmpeg and output-less paths asserted).
   - Testing helpers: all four `testing.go` rows are `ported` — `Buffer` and
     `CurrentLine` read the emulator's cursor row, and `SaveOutput` creates the
     file once, appends later calls, and writes the 80-character separator.
