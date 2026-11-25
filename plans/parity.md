@@ -115,8 +115,9 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `7f174c4` port: reconcile parser/parser.go and port the six
-  upstream parser tests (working tree clean at that commit).
+- **Last commit:** `518e8b9` port: reconcile the
+  vhs/testing/themes/screenshot/record/shell rows (working tree clean at that
+  commit).
 - **Ledger `missing` rows left (41), by file:** `ffmpeg.go` 16, `draw.go` 11,
   `video.go` 6, `vhs.go` 3 (`Setup`, `Cleanup`, `ApplyLoopOffset`),
   `testing.go` 1 (`DefaultTestOptions`), `screenshot.go` 1 (`MakeScreenshots`),
