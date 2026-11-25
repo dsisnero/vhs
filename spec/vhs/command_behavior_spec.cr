@@ -57,7 +57,7 @@ module Vhs
         Output demo.mp4
         Output demo.webm
         Output frames/
-        Output session.test
+        Output temp/command-behavior/session.test
         Sleep 0.1s
         TAPE
 
@@ -77,7 +77,7 @@ module Vhs
         end
 
         Vhs.evaluate(tape, IO::Memory.new, inspect_outputs, drop_outputs_option).should be_empty
-        seen.should eq({"demo.gif", "demo.mp4", "demo.webm", "frames/", "session.test"})
+        seen.should eq({"demo.gif", "demo.mp4", "demo.webm", "frames/", "temp/command-behavior/session.test"})
       end
     end
 
