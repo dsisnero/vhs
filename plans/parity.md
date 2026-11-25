@@ -157,8 +157,8 @@ are*, not *how the repo works*.
   - Specs write into `./temp`, so two suites running at once collide on the same
     files (the `Source` command spec fails intermittently). Run gates serially;
     the adversarial signoff runs a nested `make test`.
-- **Last commit:** `29b04b8` port: remove four divergences that only needed
-  porting work (working tree clean at that commit).
+- **Last commit:** `2838339` port: run on ttyd + Rod like upstream, delete the
+  headless emulator (working tree clean at that commit).
 - **Ledger:** 248 rows: 243 `ported`, 3 `intentional_divergence`, 2 `missing`
   (`record`, `publish` — pending, not impossible). All 17 upstream test IDs are
   `ported`.
