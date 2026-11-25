@@ -1605,6 +1605,13 @@ module Vhs
       end
     end
 
+    # Prepare the session, then start recording. Upstream calls Setup between
+    # Start and the first captured frame; the port calls it first because Start
+    # is what begins capture here.
+    if err = v.setup
+      v.errors << err
+    end
+
     # Start VHS
     v.start
 
@@ -1627,8 +1634,21 @@ module Vhs
 
     # Render the video outputs and any deferred screenshots.
     if err = v.render
+      v.cleanup
       return [err] of Exception
     end
+
+    # Move the frames to the configured directory (Output with a trailing
+    # slash), then clean up the temporary frame and screenshot directories.
+    #
+    # Divergence: upstream renames to the raw argument, and a trailing slash makes
+    # that rename fail silently; the port trims it so the documented
+    # `Output frames/` works.
+    frames = v.options.video.output.frames
+    if !frames.empty? && Dir.exists?(v.options.video.input)
+      File.rename(v.options.video.input, frames.rstrip('/')) rescue nil
+    end
+    v.cleanup
 
     v.errors
   end
@@ -1939,13 +1959,93 @@ module Vhs
 
     # Render starts rendering the individual frames into a video.
     def render : Exception?
-      # For now, skip loop offset (TODO: implement ApplyLoopOffset)
-      # if err = apply_loop_offset
-      #   return err
-      # end
+      if err = apply_loop_offset
+        return err
+      end
 
-      # Generate the video(s) with the frames using FFmpeg
+      # Generate the video(s) with the frames using FFmpeg.
       ::Vhs::FFmpegRenderer.render(@options.video, @options.screenshot)
+    end
+
+    # ApplyLoopOffset shifts the first frames to the end of the sequence, which
+    # turns a recording into a seamless loop. Upstream renames the text and
+    # cursor frames concurrently; the rename is sequential here, same result.
+    def apply_loop_offset : Exception?
+      return Exception.new("no frames") if @total_frames <= 0
+
+      loop_offset_frames = (@options.loop_offset / 100.0 * @total_frames).ceil.to_i
+      loop_offset_frames = loop_offset_frames % @total_frames
+      return nil if loop_offset_frames <= 0
+
+      offset_start = @options.video.starting_frame
+      offset_end = loop_offset_frames
+      @options.video.starting_frame = offset_end + 1
+
+      input = @options.video.input
+      (offset_start..offset_end).each do |frame_num|
+        offset_frame_num = frame_num + @total_frames
+        {CURSOR_FRAME_FORMAT, TEXT_FRAME_FORMAT}.each do |format|
+          File.rename(
+            File.join(input, sprintf(format, frame_num)),
+            File.join(input, sprintf(format, offset_frame_num))
+          )
+        rescue ex
+          return Exception.new("error applying offset to frame: #{ex.message}")
+        end
+      end
+
+      nil
+    end
+
+    # Setup prepares the terminal session once the settings have run.
+    #
+    # Upstream sets the browser viewport, finds the xterm canvases, applies the
+    # terminal options, and re-creates the frame directory. The headless port has
+    # no viewport, canvas, or xterm options; the frame directory reset is what
+    # carries over, and it runs before capture starts (the emulator's buffer size
+    # is fixed rather than fitted to the video dimensions).
+    def setup : Exception?
+      input = @options.video.input
+      unless input.empty?
+        remove_tree(input)
+        Dir.mkdir_p(input)
+        File.chmod(input, 0o750)
+      end
+      nil
+    rescue ex
+      ex
+    end
+
+    # Cleanup removes the frame and screenshot directories.
+    def cleanup : Exception?
+      [@options.video.input, @options.screenshot.input].each do |dir|
+        next if dir.empty?
+
+        remove_tree(dir)
+      end
+      nil
+    rescue ex
+      ex
+    end
+
+    # remove_tree deletes a directory tree.
+    #
+    # This checkout lives on an exFAT volume where AppleDouble `._*` sidecars are
+    # created and removed asynchronously, so a single FileUtils.rm_rf can leave
+    # entries behind; retry until the directory is gone.
+    private def remove_tree(dir : String) : Nil
+      return unless Dir.exists?(dir)
+
+      10.times do
+        begin
+          FileUtils.rm_rf(dir)
+        rescue File::NotFoundError
+          # A sidecar vanished between listing and unlinking.
+        end
+        return unless Dir.exists?(dir)
+
+        sleep 10.milliseconds
+      end
     end
 
     # Buffer returns the current terminal buffer lines.

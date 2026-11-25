@@ -8,22 +8,18 @@ are*, not *how the repo works*.
 
 ## Where we are
 
-- **Current focus:** the renderer is ported and wired end to end. A tape now
-  captures `frame-text-%05d.png` + `frame-cursor-%05d.png`, `Vhs.evaluate` calls
-  `VHS#render`, and ffmpeg runs upstream's filter chain (overlay → scale → fps →
-  pad → fillborders → bar → radius → margin → optional palette). `make test`
-  keeps specs hermetic through `evaluate_without_render`.
-  Only 7 rows are still `missing`: three `VHS` lifecycle methods
-  (`Setup`, `Cleanup`, `ApplyLoopOffset`) and four CLI surfaces
-  (`publish.go`, `syntax.go::Highlight`, `record.go::Record`,
-  `testing.go::DefaultTestOptions`).
+- **Current focus:** the renderer and the `VHS` lifecycle are done. A tape
+  captures `frame-text-%05d.png` + `frame-cursor-%05d.png`, `Vhs.evaluate`
+  renders (`ApplyLoopOffset` → ffmpeg → optional frames output → `Cleanup`), and
+  ffmpeg runs upstream's filter chain. Only **4 rows** are still `missing`, all
+  CLI surfaces: `publish.go::Publish`, `syntax.go::Highlight`,
+  `record.go::Record`, `testing.go::DefaultTestOptions`.
 - **Next up:**
-  1. Finish the `VHS` lifecycle: `ApplyLoopOffset` (the frame names now match
-     upstream, so the rename pass ports directly), `Cleanup` (drop the frame
-     directories), and `Setup` (post-settings terminal sizing).
-  2. Port the remaining CLI surfaces: `publish.go` (Charm publish),
-     `syntax.go` (`Highlight`), `testing.go` (`vhs test` + `DefaultTestOptions`),
-     `record.go`'s recorder entry point, then `serve.go`/`tty.go`/`man.go`.
+  1. Port `syntax.go::Highlight` (the coloured command echo, which also unblocks
+     the two `Evaluate` gaps) and `testing.go` (`DefaultTestOptions` + `vhs test`).
+  2. Port `record.go`'s recorder entry point and `publish.go` (Charm publish).
+  3. Port `serve.go`/`tty.go`/`man.go` (they are not in the ledger's kind
+     vocabulary yet, so add them with the CLI phase).
 - **Status by area:**
   - Token: all 85 `token/token.go` rows `ported` and `token_test.go::TestToCamel`
     ported — the spec carries the full 77-constant table, the 58-entry keyword
@@ -73,12 +69,11 @@ are*, not *how the repo works*.
     `Video`, and `Screenshot`; Crystal structs copy, so every `SET` that touches
     the style goes through `Vhs.update_style`, which writes all three copies
     (asserted in `spec/vhs/evaluator_spec.cr`).
-  - VHS lifecycle: `Start` and `Render` are `partial` (headless terminal
-    emulator + PNG frames instead of ttyd/rod canvases); `Setup`, `Cleanup`, and
-    `ApplyLoopOffset` are `missing`. `VHS.new` now seeds
-    `Vhs.default_vhs_options` like upstream `New`, asserted in
-    `spec/vhs_spec.cr` alongside the full default-options table, the shell
-    table, and the theme JSON shape.
+  - VHS lifecycle: `ApplyLoopOffset` and `Cleanup` are `ported` (with specs);
+    `Setup` is `partial` (only the frame-directory reset is portable in a
+    headless port); `Start`/`Render` stay `partial` because the port uses a
+    terminal emulator and PNG frames instead of ttyd/rod canvases. `VHS.new`
+    seeds `Vhs.default_vhs_options` like upstream `New`.
   - Testing helpers: `TestOptions` / `Buffer` / `CurrentLine` / `SaveOutput` are
     `partial` (screen-line based, no cursor tracking, no `DefaultTestOptions`).
   - Record / screenshot / themes: upstream tests ported (8 `ported` test rows);
@@ -124,12 +119,12 @@ are*, not *how the repo works*.
 - **Last commit:** `518e8b9` port: reconcile the
   vhs/testing/themes/screenshot/record/shell rows (working tree clean at that
   commit).
-- **Ledger `missing` rows left (7):** `vhs.go` 3 (`Setup`, `Cleanup`,
-  `ApplyLoopOffset`), `testing.go` 1 (`DefaultTestOptions`), `record.go` 1,
-  `publish.go` 1, `syntax.go` 1. No test IDs are `missing` any more.
-- **Gates:** `make lint` pass (28 files); `make test` `164 examples, 0
+- **Ledger `missing` rows left (4), all CLI-only:** `publish.go::Publish`,
+  `syntax.go::Highlight`, `record.go::Record`,
+  `testing.go::DefaultTestOptions`. No test IDs are `missing` any more.
+- **Gates:** `make lint` pass (29 files); `make test` `170 examples, 0
   failures`; `make inventory` pass (strict refs; 231 items tracked, 248 ledger
-  rows: 198 `ported`, 23 `partial`, 15 `in_progress`, 7 `missing`, 5
+  rows: 200 `ported`, 24 `partial`, 15 `in_progress`, 4 `missing`, 5
   `intentional_divergence`); `PORT_PARSER=regex verify_parity_adversarial.sh .
   vendor/vhs go 'make test' 'go test ./...'` pass; `check_kind_vocabulary.py
   --scan go=vendor/vhs` no drops.
@@ -180,7 +175,8 @@ Keep this block accurate after every feature: the next session reads it first
 - [x] Reconcile `video.go` (6 rows) with `src/vhs/ffmpeg_builder.cr`
 - [x] Wire the builders into `ffmpeg_renderer.cr` and switch the frame capture
       to text + cursor streams
-- [ ] Port `VHS#ApplyLoopOffset`, `VHS#Cleanup`, `VHS#Setup`
+- [x] Port `VHS#ApplyLoopOffset` and `VHS#Cleanup`; `VHS#Setup` is `partial`
+      (frame-directory reset only)
 
 ## Phase 4 — CLI surfaces
 
@@ -202,6 +198,14 @@ Keep this block accurate after every feature: the next session reads it first
 - Error printing has no lipgloss: `ErrorStyle`/`LineNumberStyle` are emitted as
   the 16-color ANSI codes they resolve to (`31` / `90`) instead of negotiating a
   color profile with the terminal, so the bytes differ only in escape sequence.
+- `Output frames/`: upstream renames the temp frame directory to the raw
+  argument (trailing slash), which fails silently, and the rename also fails
+  across filesystems because the frame input lives in the system temp dir. The
+  port trims the trailing slash so a same-filesystem output works; a
+  cross-filesystem move still fails like upstream, since both ignore the error.
+- `VHS#Cleanup`/`#Setup` retry directory removal: this checkout's exFAT volume
+  creates and removes AppleDouble `._*` sidecars asynchronously, so a single
+  `FileUtils.rm_rf` leaves entries behind.
 - `Vhs.make_gif`/`make_mp4`/`make_webm` return the ffmpeg argument list (or nil)
   where upstream returns an `*exec.Cmd`; `FFmpegRenderer` spawns the process, and
   a failing invocation is logged rather than returned, matching upstream
